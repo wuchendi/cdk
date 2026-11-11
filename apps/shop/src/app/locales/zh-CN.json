@@ -1,0 +1,108 @@
+{
+  "brand": "K工作室",
+  "nav": {
+    "home": "首页",
+    "orders": "查询订单"
+  },
+  "notice": {
+    "title": "店铺公告",
+    "lead": "卡密自动发货，支付成功后立即显示，可在控制台激活使用。",
+    "rulesTitle": "购买须知",
+    "rule1": "商品说明：卡密内含对应额度，一张卡密可多次提交任务，直到额度用完。",
+    "rule2": "订单凭证：游客下单请牢记邮箱和订单密码，或保存订单编号，用于之后查询卡密。",
+    "rule3": "USDT 支付：仅支持 TRC20 网络，必须按页面显示的精确金额转账，否则无法自动到账。",
+    "rule4": "订单时效：订单创建后 15 分钟内有效，超时请重新下单，请勿向过期订单付款。",
+    "rule5": "安全提醒：卡密等同于额度，请勿泄露给他人。"
+  },
+  "home": {
+    "products": "精选商品",
+    "autoDelivery": "自动发货",
+    "sold": "销量 {{count}}",
+    "credits": "{{count}} 额度",
+    "loading": "正在加载商品…",
+    "loadFailed": "商品加载失败，请刷新重试。",
+    "empty": "暂无在售商品"
+  },
+  "product": {
+    "back": "返回首页",
+    "notFound": "商品不存在或已下架",
+    "quantity": "数量",
+    "decrease": "减少数量",
+    "increase": "增加数量",
+    "email": "联系邮箱",
+    "emailHint": "用于查询订单",
+    "password": "订单密码",
+    "passwordHint": "请设置您的订单密码（至少 6 位）",
+    "method": "支付方式",
+    "methods": {
+      "alipay": "支付宝",
+      "usdt": "USDT (TRC20)",
+      "mock": "模拟支付（仅开发）"
+    },
+    "noMethods": "支付渠道暂未开放，请稍后再试。",
+    "total": "合计",
+    "buy": "立即购买",
+    "buying": "正在创建订单…"
+  },
+  "order": {
+    "title": "订单详情",
+    "loading": "正在加载订单…",
+    "notFound": "订单不存在，请检查订单编号。",
+    "orderNo": "订单编号",
+    "product": "商品",
+    "quantity": "数量",
+    "amount": "订单金额",
+    "method": "支付方式",
+    "createdAt": "下单时间",
+    "status": {
+      "pending": "待支付",
+      "paid": "已支付",
+      "expired": "已过期"
+    },
+    "payTitle": "请在 {{time}} 内完成支付",
+    "alipayHint": "请使用支付宝扫描二维码付款，支付成功后页面会自动显示卡密。",
+    "alipayOpen": "在手机上打开支付宝付款",
+    "usdtHint": "请使用 TRC20 网络向下方地址转入精确金额，到账确认后页面会自动显示卡密。",
+    "usdtAmount": "转账金额 (USDT)",
+    "usdtAddress": "收款地址 (TRC20)",
+    "usdtWarning": "金额必须与上方完全一致（含小数位），多付或少付都无法自动到账。",
+    "mockHint": "这是开发环境的模拟支付，不会产生真实扣款。点击下方按钮即视为支付成功并发放卡密。",
+    "mockPay": "模拟支付成功",
+    "mockPaying": "处理中…",
+    "waiting": "正在等待支付结果…",
+    "paidTitle": "支付成功，卡密如下",
+    "paidHint": "每张卡密含 {{credits}} 额度，请妥善保存。",
+    "dashboard": "前往控制台使用",
+    "expired": "订单已过期，请重新下单。请勿再向该订单付款。",
+    "reorder": "重新选购",
+    "copy": "复制",
+    "copied": "已复制"
+  },
+  "query": {
+    "title": "订单查询",
+    "subtitle": "查看此浏览器的订单，或通过订单密码、订单编号查询",
+    "tabs": {
+      "browser": "浏览器订单",
+      "password": "订单密码查单",
+      "number": "订单编号查单"
+    },
+    "browserEmpty": "未找到浏览器订单记录",
+    "browserEmptyHint": "请确认您之前在此浏览器下过单",
+    "email": "下单邮箱",
+    "password": "订单密码",
+    "orderNo": "订单编号",
+    "search": "查询",
+    "searching": "查询中…",
+    "noMatch": "没有匹配的订单，请检查邮箱和订单密码。",
+    "loading": "正在加载订单…",
+    "view": "查看"
+  },
+  "errors": {
+    "INVALID_INPUT": "输入有误，请检查后重试。",
+    "METHOD_UNAVAILABLE": "该支付方式暂不可用，请更换。",
+    "PAYMENT_UNAVAILABLE": "支付发起失败，请稍后重试或更换支付方式。",
+    "NOT_FOUND": "内容不存在。",
+    "NETWORK": "请求失败，请检查网络后重试。",
+    "ORDER_NOT_PENDING": "订单已支付或已过期。"
+  }
+}

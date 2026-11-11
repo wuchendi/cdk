@@ -1,0 +1,7 @@
+{
+  "extends": "@cdk/tsconfig/bun.json",
+  "compilerOptions": {
+    "paths": { "@/*": ["./src/*"] }
+  },
+  "include": ["src", "test", "drizzle.config.ts"]
+}

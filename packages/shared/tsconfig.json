@@ -1,0 +1,4 @@
+{
+  "extends": "@cdk/tsconfig/base.json",
+  "include": ["src"]
+}

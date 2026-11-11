@@ -1,0 +1,128 @@
+{
+  "brand": "K工作室 · 管理后台",
+  "nav": {
+    "products": "商品管理",
+    "tasks": "任务管理",
+    "orders": "订单管理",
+    "logout": "退出"
+  },
+  "login": {
+    "title": "管理员登录",
+    "token": "管理令牌",
+    "hint": "即 API 环境变量 ADMIN_TOKEN 的值，仅保存在当前标签页。",
+    "submit": "进入后台",
+    "submitting": "验证中…"
+  },
+  "products": {
+    "title": "商品管理",
+    "create": "新增商品",
+    "edit": "编辑商品",
+    "name": "商品名称",
+    "description": "商品描述",
+    "credits": "每张卡密额度",
+    "price": "价格（元）",
+    "sort": "排序",
+    "sortHint": "数字越小越靠前",
+    "active": "上架销售",
+    "save": "保存",
+    "saving": "保存中…",
+    "cancel": "取消",
+    "list": "上架",
+    "unlist": "下架",
+    "listed": "已上架",
+    "unlisted": "已下架",
+    "loading": "正在加载商品…",
+    "empty": "暂无商品",
+    "columns": {
+      "id": "ID",
+      "name": "名称",
+      "credits": "额度",
+      "price": "价格",
+      "sold": "销量",
+      "sort": "排序",
+      "status": "状态",
+      "actions": "操作"
+    }
+  },
+  "orders": {
+    "title": "订单管理",
+    "all": "全部",
+    "status": {
+      "pending": "待支付",
+      "paid": "已支付",
+      "expired": "已过期"
+    },
+    "methods": {
+      "alipay": "支付宝",
+      "usdt": "USDT",
+      "mock": "模拟支付"
+    },
+    "search": "搜索订单编号或邮箱",
+    "searchSubmit": "搜索",
+    "loading": "正在加载订单…",
+    "empty": "暂无匹配的订单",
+    "settle": "手动补单",
+    "settleConfirm": "确认将订单 {{orderNo}} 标记为已支付并发放 {{quantity}} 张卡密？此操作不可撤销。",
+    "pagination": "第 {{page}} / {{pages}} 页 · 共 {{count}} 条",
+    "previous": "上一页",
+    "next": "下一页",
+    "columns": {
+      "order": "订单",
+      "buyer": "买家邮箱",
+      "product": "商品",
+      "amount": "金额",
+      "method": "支付方式",
+      "status": "状态",
+      "createdAt": "下单时间",
+      "keys": "卡密 / 交易号",
+      "actions": "操作"
+    }
+  },
+  "errors": {
+    "INVALID_INPUT": "输入有误，请检查后重试。",
+    "UNAUTHORIZED": "管理令牌无效或已失效，请重新登录。",
+    "NOT_FOUND": "内容不存在，或 API 未启用管理功能（未配置 ADMIN_TOKEN）。",
+    "ORDER_ALREADY_PAID": "订单已支付，无需补单。",
+    "NETWORK": "请求失败，请检查网络后重试。"
+  },
+  "tasks": {
+    "title": "任务管理",
+    "all": "全部",
+    "status": {
+      "pending": "等待运行",
+      "running": "运行中",
+      "success": "运行成功",
+      "failed": "失败 / 异常"
+    },
+    "types": {
+      "sub6": "6 个月订阅",
+      "sub12": "12 个月订阅",
+      "sub24": "24 个月订阅"
+    },
+    "search": "搜索邮箱或卡密",
+    "searchSubmit": "搜索",
+    "loading": "正在加载任务…",
+    "empty": "暂无匹配的任务",
+    "password": "密码",
+    "totp": "2FA",
+    "copy": "点击复制",
+    "copied": "已复制 ",
+    "copyAll": "复制账号",
+    "setStatus": "修改状态",
+    "notePrompt": "填写运行详情（可留空）：",
+    "completedAt": "完成",
+    "pagination": "第 {{page}} / {{pages}} 页 · 共 {{count}} 条",
+    "previous": "上一页",
+    "next": "下一页",
+    "columns": {
+      "id": "ID",
+      "cdkey": "卡密",
+      "account": "账号信息",
+      "type": "任务类型",
+      "status": "运行状态",
+      "message": "运行详情",
+      "createdAt": "时间",
+      "actions": "操作"
+    }
+  }
+}

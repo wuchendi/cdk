@@ -1,0 +1,88 @@
+{
+  "brand": "K工作室",
+  "header": {
+    "cdkeyPlaceholder": "输入卡密 CDKey",
+    "activate": "激活",
+    "apiDocs": "API 文档"
+  },
+  "stats": {
+    "total": "总账号数",
+    "pending": "等待运行",
+    "running": "运行中",
+    "success": "运行成功",
+    "failed": "失败 / 异常"
+  },
+  "system": {
+    "api": "API 状态",
+    "online": "在线 v{{version}}",
+    "offline": "离线",
+    "checking": "检测中..."
+  },
+  "placeholder": "任务列表开发中",
+  "dashboard": {
+    "key": "卡密",
+    "balance": "可用额度：{{balance}}",
+    "logout": "退出",
+    "activating": "验证中…",
+    "purchase": "购买Key",
+    "purchaseUnavailable": "购买渠道暂未配置，请联系管理员。",
+    "securityTitle": "核心账号安全警告",
+    "securityBody": "任务需要账号邮箱、密码与 2FA 密钥用于自动登录办理。请仅提交本人或已获授权的账号，切勿提交支付资料；任务完成并核对结果后，请及时修改密码并检查账号安全设置。",
+    "closeNotice": "关闭使用说明",
+    "instructions": "使用说明",
+    "notice1": "提交前请删除账号中的付款资料。",
+    "notice2": "请确认账号地区受支持，且已通过年龄验证。",
+    "notice3": "账号已有有效订阅或加入家庭组时，请先确认是否符合办理条件。",
+    "notice4": "新注册账号可能触发平台风控，请自行确认账号状态。",
+    "notice5": "取消等待运行的任务将退回对应额度，运行中的任务无法取消。",
+    "queueTitle": "当前排队队列",
+    "queue": "当前共有 {{count}} 个任务正在排队等待运行",
+    "workerUnavailable": "执行服务尚未接入，任务将保持等待运行。",
+    "create": "创建任务",
+    "account": "账号信息",
+    "accountFormat": "格式：邮箱----密码----2FA密钥",
+    "accountPlaceholder": "邮箱----密码----2FA密钥",
+    "taskType": "任务类型",
+    "credits": "额度",
+    "types": {
+      "sub6": "6 个月订阅",
+      "sub12": "12 个月订阅",
+      "sub24": "24 个月订阅"
+    },
+    "submit": "提交任务",
+    "submitting": "提交中…",
+    "cost": "本次消耗 {{cost}} 额度；取消等待任务将退回额度。",
+    "submitted": "任务已加入队列。",
+    "cancelled": "任务已取消，额度已退回。",
+    "filter": "按状态筛选",
+    "all": "全部最近记录",
+    "search": "搜索邮箱",
+    "refresh": "刷新",
+    "locked": "请先激活卡密查看任务",
+    "loading": "正在加载任务…",
+    "loadFailed": "加载失败，请点击刷新重试。",
+    "empty": "暂无匹配的任务记录",
+    "cancel": "取消并退款",
+    "pagination": "第 {{page}} / {{pages}} 页 · 共 {{count}} 条",
+    "previous": "上一页",
+    "next": "下一页",
+    "columns": {
+      "id": "ID",
+      "email": "邮箱 (EMAIL)",
+      "type": "任务类型",
+      "status": "运行状态",
+      "message": "运行详情",
+      "completed": "完成时间",
+      "actions": "操作"
+    },
+    "errors": {
+      "INVALID_KEY": "卡密无效，请检查后重试。",
+      "INVALID_INPUT": "账号信息格式有误，请使用：邮箱----密码----2FA密钥。",
+      "INSUFFICIENT_BALANCE": "可用额度不足，请更换卡密。",
+      "DUPLICATE_TASK": "相同邮箱和类型的任务已在队列或运行中。",
+      "TASK_NOT_PENDING": "任务已开始运行，无法取消。",
+      "NOT_FOUND": "任务不存在或已被取消，请刷新列表。",
+      "NETWORK": "请求失败，请检查网络后重试。"
+    }
+  }
+}

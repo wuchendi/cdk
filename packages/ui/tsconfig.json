@@ -1,0 +1,7 @@
+{
+  "extends": "@cdk/tsconfig/react.json",
+  "compilerOptions": {
+    "paths": { "@cdk/ui/*": ["./*"] }
+  },
+  "include": ["src"]
+}

@@ -1,0 +1,43 @@
+{
+  "name": "@cdk/shop",
+  "type": "module",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Key shop for cdk.",
+  "scripts": {
+    "dev": "nsl run --name cdk-shop vite",
+    "dev:bare": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "test": "vitest run",
+    "test:coverage": "vitest run --coverage",
+    "typecheck": "tsc --noEmit -p tsconfig.json"
+  },
+  "dependencies": {
+    "@cdk/shared": "workspace:*",
+    "@cdk/ui": "workspace:*",
+    "@tanstack/react-query": "^5.107.1",
+    "@tanstack/react-router": "^1.170.46",
+    "i18next": "^27.1.1",
+    "lucide-react": "^1.72.0",
+    "qrcode.react": "^4.2.0",
+    "react": "^19.3.1",
+    "react-dom": "^19.3.1",
+    "react-i18next": "^18.0.1"
+  },
+  "devDependencies": {
+    "@cdk/tsconfig": "workspace:*",
+    "@tailwindcss/vite": "^4.3.5",
+    "@tanstack/router-plugin": "^1.169.0",
+    "@testing-library/jest-dom": "^7.0.1",
+    "@testing-library/react": "^16.3.3",
+    "@types/react": "^19.3.0",
+    "@types/react-dom": "^19.3.0",
+    "@vitejs/plugin-react": "^6.3.0",
+    "jsdom": "^31.0.0",
+    "tailwindcss": "^4.3.5",
+    "typescript": "catalog:",
+    "vite": "^8.3.8",
+    "vitest": "^5.1.0"
+  }
+}

@@ -1,0 +1,45 @@
+# dependencies
+node_modules/
+
+# build output
+dist
+out
+*.tgz
+
+# coverage
+coverage
+*.lcov
+
+# logs
+logs
+*.log
+
+# runtime data
+data/
+*.pid
+*.db
+*.db-shm
+*.db-wal
+
+# TypeScript
+*.tsbuildinfo
+
+# caches
+.cache
+
+# env and secrets
+.env
+.env.*
+!.env.example
+*.key
+*.pem
+
+# OS / IDE
+.DS_Store
+Thumbs.db
+.idea
+.vscode
+
+# temp
+tmp/
+.tmp/
