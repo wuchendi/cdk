@@ -12,6 +12,7 @@ apps/admin        Admin console SPA (@cdk/admin), deployed separately
 packages/shared   Shared types/constants (@cdk/shared)
 packages/ui       Shared theme, UI components, HTTP client (@cdk/ui)
 packages/tsconfig Shared TS presets (@cdk/tsconfig)
+worker/           Python execution worker (Playwright), operator-run
 data/             Runtime state (SQLite), git-ignored
 scripts/clean.sh  Workspace cleanup
 ```
@@ -59,6 +60,10 @@ A static SPA with no backend of its own. Routes: `/` (notice + products), `/prod
 ## Admin (`apps/admin`)
 
 A static SPA for the operator. It signs in with `ADMIN_TOKEN` (kept in `sessionStorage`, sent as a bearer token) and calls `/api/admin`: `/` manages products (create, edit, list/unlist, sort), `/orders` lists orders with filter and search and can settle an unpaid order by hand, which issues its keys through `fulfilOrder` with a `manual:` trade marker. `/tasks` lists every cdkey's task with the submitted account (email, password, 2FA — admin-only) and moves it through `running` / `success` / `failed` with a run note. Products are never deleted, only unlisted, because orders reference them.
+
+## Execution worker (`worker/`)
+
+A Python + Playwright automation (operator-run on Windows, real Chrome + US proxy — not deployable on the headless server) that performs the account subscription a task represents. `automation_engine.py` is the vendored engine (kept as-is); `task_worker.py` is the cdk integration: it polls `GET /api/admin/tasks?status=pending` for credentialed tasks, runs the engine per account, and reports `running` / `success` / `failed` with a note via `PATCH /api/admin/tasks/:id` (`cdk_api.py` is the stdlib client). Card and proxy stay operator-local in `worker/config.json` (gitignored). Tasks move from pending to a final state in the admin as the worker runs. `app.py` is the engine's original standalone console, kept for manual use.
 
 ## Domain
 

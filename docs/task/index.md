@@ -45,3 +45,4 @@ Each task is a single line linking to its detail file. All detailed information 
 - [x] [**20261111-1017-unify-frontend-style Unify the style of the three frontends**](20261111-1017-unify-frontend-style.md) `P1`
 - [x] [**20261111-1050-task-credential-format Require email/password/2FA for a task**](20261111-1050-task-credential-format.md) `P1`
 - [x] [**20261111-1108-admin-task-view Admin task management view**](20261111-1108-admin-task-view.md) `P1`
+- [x] [**20261111-1123-integrate-execution-worker Integrate the execution worker**](20261111-1123-integrate-execution-worker.md) `P1`

@@ -1,0 +1,17 @@
+{
+  "api_url": "https://cdk.a.wd.ds.cc",
+  "admin_token": "",
+  "poll_seconds": 15,
+  "target_region": "US",
+  "auto_cancel": true,
+  "base_port": 9320,
+  "proxy_template": "",
+  "card": {
+    "number": "",
+    "exp_month": "",
+    "exp_year": "",
+    "cvc": "",
+    "name": "",
+    "zip": "97201"
+  }
+}

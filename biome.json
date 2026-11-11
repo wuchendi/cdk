@@ -104,7 +104,8 @@
       "!apps/web/src/app/routeTree.gen.ts",
       "!apps/shop/src/app/routeTree.gen.ts",
       "!apps/admin/src/app/routeTree.gen.ts",
-      "!packages/ui/src/components/ui/**"
+      "!packages/ui/src/components/ui/**",
+      "!worker/**"
     ]
   }
 }

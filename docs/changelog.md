@@ -63,3 +63,7 @@ Unified page scrolling on the base-nova `ScrollArea` component (pulled via `bunx
 ## 2026-11-11 11:10 [progress]
 
 Added the admin task view (task 20261111-1108-admin-task-view): `GET /api/admin/tasks` (all tasks joined to their cdkey, filter by status, search email/cdkey, paginated, returns the account credentials — admin-only) and `PATCH /api/admin/tasks/:id` (set `running`/`success`/`failed` plus a run note, `completed_at` on finish). New `apps/admin` `/tasks` page with copyable account, status filter, search, pagination and per-row status change. The operator uses this until an execution worker exists.
+
+## 2026-11-11 11:24 [progress]
+
+Vendored the Google-Pro automation helper into `worker/` (was in gitignored `.tmp/`) and wired it to the task system (task 20261111-1123-integrate-execution-worker). The Playwright engine (`automation_engine.py`) and its standalone console (`app.py`) are kept as-is; new `task_worker.py` polls `GET /api/admin/tasks?status=pending`, runs the engine per account, and reports `running`/`success`/`failed` with a note via `PATCH /api/admin/tasks/:id` (`cdk_api.py`, stdlib urllib). Card/proxy stay operator-local in `worker/config.json` (gitignored); no API or schema change. The worker runs on the operator's Windows machine and was syntax-checked only (needs real Chrome + US proxy).

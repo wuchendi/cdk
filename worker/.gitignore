@@ -1,0 +1,19 @@
+# Operator-local configuration and runtime data — never commit
+config.json
+config (*).json
+.env
+.env.*
+!.env.example
+profiles/
+screenshots/
+__pycache__/
+.pytest_cache/
+.venv/
+venv/
+*.pyc
+*.pyo
+*.log
+*.pem
+*.key
+*.p12
+*.pfx
