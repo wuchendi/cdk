@@ -67,3 +67,7 @@ Added the admin task view (task 20261111-1108-admin-task-view): `GET /api/admin/
 ## 2026-11-11 11:24 [progress]
 
 Vendored the Google-Pro automation helper into `worker/` (was in gitignored `.tmp/`) and wired it to the task system (task 20261111-1123-integrate-execution-worker). The Playwright engine (`automation_engine.py`) and its standalone console (`app.py`) are kept as-is; new `task_worker.py` polls `GET /api/admin/tasks?status=pending`, runs the engine per account, and reports `running`/`success`/`failed` with a note via `PATCH /api/admin/tasks/:id` (`cdk_api.py`, stdlib urllib). Card/proxy stay operator-local in `worker/config.json` (gitignored); no API or schema change. The worker runs on the operator's Windows machine and was syntax-checked only (needs real Chrome + US proxy).
+
+## 2026-11-11 11:29 [progress]
+
+Made the execution worker cross-platform: `automation_engine.py` Chrome-path detection now honours `CHROME_PATH` and probes Linux/macOS locations, process cleanup uses `terminate()/kill()` off Windows, and the Windows-only netstat/taskkill port cleanup is skipped elsewhere. Added `worker/run.sh` (venv + deps + playwright + run) and documented Linux/macOS usage (real Chromium, a display or `xvfb-run`, US proxy). The engine's browser logic is unchanged.

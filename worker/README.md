@@ -75,3 +75,46 @@
 - 任务一旦开始即被置为「运行中」，后台不会再次下发；若中途崩溃，任务会停在
   「运行中」，在管理后台把它改回「等待运行」即可重跑。
 - 任务类型（sub6/sub12/sub24）目前都走零成本 24 个月流程；按时长分层是后续项。
+
+
+========================================================================
+  在 Linux / macOS 上运行
+========================================================================
+
+`.bat` 只是 Windows 的双击启动器，对应命令在 Linux/macOS 上是：
+
+前置条件：
+- Python 3.10+
+- 真实的 Chrome 或 Chromium（引擎用它登录 Google，不是 Playwright 自带的那个）
+  * Debian/Ubuntu: `sudo apt install chromium`（或装 Google Chrome）
+  * 自动探测 `/usr/bin/google-chrome`、`/usr/bin/chromium` 等；路径不同时用
+    环境变量指定：`export CHROME_PATH=/path/to/chrome`
+- 一个“桌面/显示”。Google 登录自动化需要有头浏览器：
+  * 有图形桌面：直接跑即可
+  * 无桌面的服务器：用 Xvfb 套一层 → `xvfb-run -a ./run.sh`
+    （装 Xvfb：`sudo apt install xvfb`）
+- 美区住宅代理（在 config.json 的 `proxy_template` 里配）
+
+运行：
+```bash
+cd worker
+cp config.example.json config.json   # 填 admin_token / 卡 / 代理
+chmod +x run.sh
+./run.sh            # 持续轮询待办任务
+./run.sh --once     # 跑完当前队列就退出
+# 无桌面服务器：
+xvfb-run -a ./run.sh
+```
+
+`run.sh` 做的事：建虚拟环境 → `pip install -r requirements.txt` →
+`playwright install chromium`（装 Playwright 驱动）→ 启动 `task_worker.py`。
+不想用脚本时手动等价命令：
+```bash
+pip install -r requirements.txt
+python -m playwright install chromium
+python task_worker.py
+```
+
+提示：无头（headless）跑 Google 登录极易被风控拦截，所以这里走的是“有头 +
+Xvfb”而不是 headless。本机那台无头容器服务器并不适合跑它，建议放在有桌面的
+操作员机器或带 Xvfb 的专用机上。

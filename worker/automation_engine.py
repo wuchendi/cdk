@@ -7,6 +7,7 @@ import os
 import re
 import socket
 import struct
+import shutil
 import subprocess
 import urllib.parse
 import time
@@ -14,15 +15,29 @@ from typing import Callable, Dict, Any, Optional
 from playwright.async_api import async_playwright
 
 def _find_chrome_path() -> str:
+    # Explicit override wins (set CHROME_PATH on Linux to your chrome/chromium).
+    env_path = os.environ.get("CHROME_PATH")
+    if env_path and os.path.exists(env_path):
+        return env_path
     candidates = [
+        # Windows
         r"C:\Program Files\Google\Chrome\Application\chrome.exe",
         r"C:\Program Files (x86)\Google\Chrome\Application\chrome.exe",
         os.path.expandvars(r"%LOCALAPPDATA%\Google\Chrome\Application\chrome.exe"),
+        # macOS
+        "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome",
+        # Linux
+        "/usr/bin/google-chrome",
+        "/usr/bin/google-chrome-stable",
+        "/usr/bin/chromium",
+        "/usr/bin/chromium-browser",
+        "/snap/bin/chromium",
     ]
-    for p in candidates:
-        if os.path.exists(p):
-            return p
-    return candidates[0]
+    for candidate in candidates:
+        if os.path.exists(candidate):
+            return candidate
+    found = shutil.which("google-chrome") or shutil.which("chromium") or shutil.which("chromium-browser")
+    return found or (env_path or candidates[0])
 
 
 CHROME_PATH = _find_chrome_path()
@@ -1740,8 +1755,11 @@ class GoogleUltraAutomator:
 
         chrome_args.append("about:blank")
 
-        # Cleanly kill any lingering process listening on self.port
+        # Cleanly kill any lingering process listening on self.port (Windows only;
+        # elsewhere a fresh user-data-dir + port is used so this is unnecessary).
         try:
+            if os.name != "nt":
+                raise RuntimeError("skip windows port cleanup")
             net_out = subprocess.check_output(f"netstat -ano | findstr :{self.port}", shell=True).decode("gbk", errors="ignore")
             for line in net_out.splitlines():
                 if "LISTENING" in line:
@@ -1788,7 +1806,17 @@ class GoogleUltraAutomator:
             if self.proxy_bridge:
                 await self.proxy_bridge.stop()
             if self.proc:
-                try:
-                    subprocess.run(f"taskkill /F /T /PID {self.proc.pid}", shell=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-                except Exception:
-                    pass
+                if os.name == "nt":
+                    try:
+                        subprocess.run(f"taskkill /F /T /PID {self.proc.pid}", shell=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+                    except Exception:
+                        pass
+                else:
+                    try:
+                        self.proc.terminate()
+                        self.proc.wait(timeout=5)
+                    except Exception:
+                        try:
+                            self.proc.kill()
+                        except Exception:
+                            pass
