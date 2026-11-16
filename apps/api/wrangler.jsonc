@@ -11,10 +11,11 @@
     "not_found_handling": "none",
     "run_worker_first": ["/api", "/api/*"]
   },
-  // Settles USDT orders once a minute.
-  "triggers": {
-    "crons": ["* * * * *"]
-  },
+  // Settles USDT orders once a minute; only needed with USDT_TRC20_ADDRESS set.
+  // Off by default: the Workers Free plan allows 5 cron triggers per account.
+  // "triggers": {
+  //   "crons": ["* * * * *"]
+  // },
   // The database is fixed per deployment. libSQL/Turso is the default: set the
   // Worker secrets DATABASE_URL and DATABASE_AUTH_TOKEN, migrate with
   // `bun run db:migrate`. For D1 instead, uncomment this block with the id from

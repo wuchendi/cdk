@@ -76,7 +76,7 @@ Repository secrets for `deploy.yml`:
 | `DATABASE_URL`, `DATABASE_AUTH_TOKEN`                                                                                      | libSQL/Turso: migrations and Worker secrets       |
 | `ADMIN_TOKEN`, `ALIPAY_PRIVATE_KEY`, `ALIPAY_PUBLIC_KEY`, `TRONGRID_API_KEY`, `SHOP_TEST_PAY_CODE`, `TURNSTILE_SECRET_KEY` | Worker secrets; unset ones are skipped            |
 
-USDT payments are matched by a Cron Trigger once a minute.
+USDT payments are matched by a Cron Trigger once a minute. It is commented out in `wrangler.jsonc` (the Workers Free plan allows 5 cron triggers per account); uncomment `triggers` when enabling USDT.
 
 API docs: `/api/openapi.json`, `/api/docs`.
 

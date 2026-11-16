@@ -88,3 +88,7 @@ Followed `/srv/ai/tinylink` for deployment (task 20261116-0252-split-deploy-work
 ## 2026-11-16 03:20 [progress]
 
 Test payment on deployments (task 20261116-0310-production-test-payment). The `mock` method is now also offered on any environment when the secret `SHOP_TEST_PAY_CODE` (8+ chars) is set; `mock-pay` then requires that code, and Cloudflare Turnstile when `TURNSTILE_SITE_KEY` (var) and `TURNSTILE_SECRET_KEY` (secret) are both set (siteverify with `remoteip`, 5 s timeout, fails closed; modelled on `/srv/ai/tinylink`). The code stays alongside Turnstile because Turnstile stops bots but not people, and issued keys drive tasks the worker executes with a real card. The catalog exposes `testPayCode` / `turnstileSiteKey`; the shop's payment panel shows the code field and the widget (re-rendered after a failed attempt, tokens are single-use), and the copy changed from "模拟支付（仅开发）" to "测试支付". `deploy.yml` and `.secrets.example.json` sync the two new secrets. Verified with API and shop tests and `wrangler dev` in production mode against the real siteverify using Cloudflare's always-pass and always-fail test keys; the widget itself was not exercised in a browser.
+
+## 2026-11-16 03:40 [progress]
+
+First deploy failed after upload: the account hit the Workers Free limit of 5 cron triggers, so `wrangler deploy` exited non-zero and the secret sync never ran. The USDT Cron Trigger is now commented out in `wrangler.jsonc`; uncomment it when USDT is configured.
