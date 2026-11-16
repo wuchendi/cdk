@@ -50,3 +50,4 @@ Each task is a single line linking to its detail file. All detailed information 
 - [x] [**20261116-0246-add-deploy-script Add a one-command build and deploy script**](20261116-0246-add-deploy-script.md) `P1`
 - [x] [**20261116-0252-split-deploy-workflow Manual deploy workflow and libSQL by default**](20261116-0252-split-deploy-workflow.md) `P1`
 - [x] [**20261116-0310-production-test-payment Test payment flow on a deployment without payment config**](20261116-0310-production-test-payment.md) `P1`
+- [x] [**20261116-0400-default-same-origin-links Default the shop and dashboard links to the same origin**](20261116-0400-default-same-origin-links.md) `P1`

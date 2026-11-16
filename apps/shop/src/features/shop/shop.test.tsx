@@ -165,6 +165,10 @@ it('settles a mock order from the payment page', async () => {
   expect(
     await screen.findByText('CDK-AAAAA-BBBBB-CCCCC-DDDDD'),
   ).toBeInTheDocument()
+  expect(screen.getByRole('link', { name: '前往控制台使用' })).toHaveAttribute(
+    'href',
+    '/',
+  )
   expect(fetcher).toHaveBeenCalledWith(
     `/api/shop/orders/${order.orderNo}/mock-pay`,
     expect.objectContaining({ method: 'POST' }),

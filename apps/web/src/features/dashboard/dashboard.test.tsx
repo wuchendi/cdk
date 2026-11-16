@@ -93,7 +93,7 @@ it('activates a key, submits and cancels a task, searches, filters and logs out'
   fireEvent.click(screen.getByRole('button', { name: '退出' }))
   expect(await screen.findByText('请先激活卡密查看任务')).toBeInTheDocument()
 })
-it('shows activation errors and allows notice dismissal and purchase feedback', async () => {
+it('shows activation errors, allows notice dismissal and links to the shop', async () => {
   vi.stubGlobal(
     'fetch',
     vi.fn(async () =>
@@ -113,10 +113,10 @@ it('shows activation errors and allows notice dismissal and purchase feedback', 
   )
   fireEvent.click(screen.getByRole('button', { name: '关闭使用说明' }))
   expect(screen.queryByText('使用说明')).not.toBeInTheDocument()
-  fireEvent.click(screen.getByRole('button', { name: '购买Key' }))
-  expect(
-    screen.getByText('购买渠道暂未配置，请联系管理员。'),
-  ).toBeInTheDocument()
+  expect(screen.getByRole('link', { name: '购买Key' })).toHaveAttribute(
+    'href',
+    '/shop/',
+  )
   fireEvent.change(screen.getByLabelText('卡密'), { target: { value: 'bad' } })
   fireEvent.click(screen.getByRole('button', { name: '激活' }))
   expect(
@@ -124,7 +124,7 @@ it('shows activation errors and allows notice dismissal and purchase feedback', 
   ).toBeInTheDocument()
 })
 
-it('links the purchase button to the shop when one is configured', () => {
+it('links the purchase button to a configured shop URL', () => {
   vi.stubEnv('VITE_SHOP_URL', 'https://shop.example.com')
   vi.stubGlobal(
     'fetch',

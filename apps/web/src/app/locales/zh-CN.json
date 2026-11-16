@@ -25,7 +25,6 @@
     "logout": "退出",
     "activating": "验证中…",
     "purchase": "购买Key",
-    "purchaseUnavailable": "购买渠道暂未配置，请联系管理员。",
     "securityTitle": "核心账号安全警告",
     "securityBody": "任务需要账号邮箱、密码与 2FA 密钥用于自动登录办理。请仅提交本人或已获授权的账号，切勿提交支付资料；任务完成并核对结果后，请及时修改密码并检查账号安全设置。",
     "closeNotice": "关闭使用说明",

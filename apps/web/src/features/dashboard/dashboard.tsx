@@ -31,7 +31,6 @@ export function Dashboard() {
   const [key, setKey] = useState('')
   const [draft, setDraft] = useState('')
   const [notice, setNotice] = useState(true)
-  const [purchase, setPurchase] = useState(false)
   const [credential, setCredential] = useState('')
   const [taskType, setTaskType] = useState<TaskType>('sub6')
   const [status, setStatus] = useState<TaskStatus | ''>('')
@@ -46,7 +45,9 @@ export function Dashboard() {
   const typeLabel = (type: TaskType) =>
     `${t(`dashboard.types.${type}`)} · ${TASK_COST[type]} ${t('dashboard.credits')}`
   const api = dashboardApi(key)
-  const shopUrl = import.meta.env.VITE_SHOP_URL as string | undefined
+  // Same origin by default; VITE_SHOP_URL points elsewhere.
+  const shopUrl =
+    (import.meta.env.VITE_SHOP_URL as string | undefined) || '/shop/'
   const session = useQuery({
     queryKey: ['dashboard', key, 'session'],
     queryFn: api.session,
@@ -177,28 +178,16 @@ export function Dashboard() {
             <BookOpen />
             {t('header.apiDocs')}
           </Button>
-          {shopUrl ? (
-            <Button
-              variant="secondary"
-              render={<a href={shopUrl} target="_blank" rel="noreferrer" />}
-            >
-              <ShoppingCart />
-              {t('dashboard.purchase')}
-            </Button>
-          ) : (
-            <Button variant="secondary" onClick={() => setPurchase(!purchase)}>
-              <ShoppingCart />
-              {t('dashboard.purchase')}
-            </Button>
-          )}
+          <Button
+            variant="secondary"
+            render={<a href={shopUrl} target="_blank" rel="noreferrer" />}
+          >
+            <ShoppingCart />
+            {t('dashboard.purchase')}
+          </Button>
         </>
       }
     >
-      {purchase && (
-        <Notice tone="neutral" role="status">
-          {t('dashboard.purchaseUnavailable')}
-        </Notice>
-      )}
       {activation.error && !key && (
         <p role="alert" className="text-sm text-destructive">
           {errorText(activation.error)}

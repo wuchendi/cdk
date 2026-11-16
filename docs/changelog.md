@@ -92,3 +92,7 @@ Test payment on deployments (task 20261116-0310-production-test-payment). The `m
 ## 2026-11-16 03:40 [progress]
 
 First deploy failed after upload: the account hit the Workers Free limit of 5 cron triggers, so `wrangler deploy` exited non-zero and the secret sync never ran. The USDT Cron Trigger is now commented out in `wrangler.jsonc`; uncomment it when USDT is configured.
+
+## 2026-11-16 04:05 [progress]
+
+Fixed the cross-app links on the deployed Worker (task 20261116-0400-default-same-origin-links): CI builds have no `apps/*/.env`, so the dashboard's purchase button showed "购买渠道暂未配置" and the shop hid its post-payment dashboard link. With all SPAs on one origin, `VITE_SHOP_URL` now defaults to `/shop/` and `VITE_DASHBOARD_URL` to `/`; the variables only override for split deployments. The now-unreachable "purchase unavailable" notice was removed.

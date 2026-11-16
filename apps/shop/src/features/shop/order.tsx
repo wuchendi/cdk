@@ -145,7 +145,8 @@ function Payment({ order }: { order: ShopOrder }) {
 
 function Keys({ order }: { order: ShopOrder }) {
   const { t } = useTranslation()
-  const dashboard = import.meta.env.VITE_DASHBOARD_URL
+  // Same origin by default; VITE_DASHBOARD_URL points elsewhere.
+  const dashboard = import.meta.env.VITE_DASHBOARD_URL || '/'
   return (
     <Panel className="space-y-4">
       <h2 className="flex items-center gap-2 text-lg font-semibold text-emerald-600">
@@ -166,13 +167,9 @@ function Keys({ order }: { order: ShopOrder }) {
           </li>
         ))}
       </ul>
-      {dashboard && (
-        <Button
-          render={<a href={dashboard} target="_blank" rel="noreferrer" />}
-        >
-          {t('order.dashboard')}
-        </Button>
-      )}
+      <Button render={<a href={dashboard} target="_blank" rel="noreferrer" />}>
+        {t('order.dashboard')}
+      </Button>
     </Panel>
   )
 }

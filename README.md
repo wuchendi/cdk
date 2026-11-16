@@ -84,7 +84,7 @@ API docs: `/api/openapi.json`, `/api/docs`.
 
 The shop is served at `/shop/` by the same deployment:
 
-1. Build-time settings go in `apps/shop/.env` (see `apps/shop/.env.example`): `VITE_DASHBOARD_URL` is the dashboard link shown after payment (e.g. `/`). Set `VITE_SHOP_URL=/shop/` in `apps/web/.env` so the dashboard's purchase button opens the shop.
+1. The dashboard's purchase button opens `/shop/` and the shop links back to `/` after payment. Override with `VITE_SHOP_URL` (`apps/web/.env`) and `VITE_DASHBOARD_URL` (`apps/shop/.env`) only when they live on other origins.
 2. `VITE_API_URL` and `CORS_ORIGINS` are only needed when the shop is hosted on another origin.
 3. Payment methods appear in the shop only when configured (see `.env.example`):
    - Alipay: `ALIPAY_APP_ID`, `ALIPAY_PRIVATE_KEY`, `ALIPAY_PUBLIC_KEY`, plus a publicly reachable `APP_URL` for the payment callback.
