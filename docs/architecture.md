@@ -1,6 +1,6 @@
 # cdk
 
-A CDKey-based credit and task dashboard, built as a Bun monorepo. Private, for study and learning; not open source.
+A CDKey-based credit and task dashboard, built as a Bun monorepo. Source available for study only under the cdk Study License (see `LICENSE`); not open source.
 
 ## Layout
 

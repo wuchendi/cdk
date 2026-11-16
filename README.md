@@ -1,6 +1,8 @@
 # cdk
 
-A CDKey credit and task dashboard, built as a Bun monorepo. Private, for study and learning; not open source.
+A CDKey credit and task dashboard, built as a Bun monorepo.
+
+> Source available for **study only** under the [cdk Study License](LICENSE). It is not open source: no commercial use, no redistribution, and every copy must be deleted within 24 hours of download.
 
 - `apps/api` — Hono + hono-openapi + Drizzle; runs on Cloudflare Workers (D1 or Turso) and on Bun (libSQL file) for local work
 - `apps/web` — React + Vite + TanStack Router / Query + shadcn/ui (base-nova) + Tailwind

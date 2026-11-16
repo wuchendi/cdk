@@ -1,5 +1,36 @@
+cdk Study License
+
 Copyright (c) 2026 cdk authors. All rights reserved.
 
-This software and its source code are proprietary and confidential.
-No part of it may be copied, modified, distributed, or used without
-prior written permission from the copyright holder.
+The source code in this repository (the "Software") is made available for
+study only, under the following terms. By downloading, cloning, copying or
+otherwise obtaining the Software, you agree to these terms.
+
+1. Permitted use. You may view, download and run the Software solely for
+   personal, non-commercial study and research.
+
+2. Deletion within 24 hours. You must permanently delete the Software and
+   every copy, fork and derivative of it in your possession within 24 hours
+   of obtaining it.
+
+3. Prohibited use. You may not:
+   a. use the Software, or anything derived from it, for any commercial
+      purpose, or operate it as a service for others;
+   b. redistribute, publish, sublicense or sell the Software or any
+      modified version of it;
+   c. use the Software in any way that violates applicable law or the terms
+      of service of any third party.
+
+4. No warranty. The Software is provided "as is", without warranty of any
+   kind, express or implied, including fitness for a particular purpose
+   and non-infringement.
+
+5. No liability. In no event shall the authors be liable for any claim,
+   damages or other liability arising from the use of the Software. You
+   bear sole responsibility for your use of it and its consequences,
+   including any breach of third-party terms of service.
+
+6. Termination. Any breach of these terms ends your rights under them
+   immediately, and you must delete the Software at once.
+
+All rights not expressly granted are reserved.

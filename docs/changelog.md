@@ -96,3 +96,7 @@ First deploy failed after upload: the account hit the Workers Free limit of 5 cr
 ## 2026-11-16 04:05 [progress]
 
 Fixed the cross-app links on the deployed Worker (task 20261116-0400-default-same-origin-links): CI builds have no `apps/*/.env`, so the dashboard's purchase button showed "购买渠道暂未配置" and the shop hid its post-payment dashboard link. With all SPAs on one origin, `VITE_SHOP_URL` now defaults to `/shop/` and `VITE_DASHBOARD_URL` to `/`; the variables only override for split deployments. The now-unreachable "purchase unavailable" notice was removed.
+
+## 2026-11-16 06:05 [decision]
+
+Replaced the proprietary `LICENSE` with the "cdk Study License": source available for personal, non-commercial study only; every copy must be deleted within 24 hours; no commercial use, service operation, redistribution or use that breaks law or third-party terms; no warranty or liability. It is not an OSI open-source license, so README and architecture say "source available", not "open source". Repository visibility is unchanged.
