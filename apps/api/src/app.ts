@@ -1,7 +1,5 @@
-import { existsSync } from 'node:fs'
-import { join } from 'node:path'
+import type { MiddlewareHandler } from 'hono'
 import { Hono } from 'hono'
-import { serveStatic } from 'hono/bun'
 import { cors } from 'hono/cors'
 import { requestId } from 'hono/request-id'
 import { secureHeaders } from 'hono/secure-headers'
@@ -13,7 +11,6 @@ import { mountDocs } from '@/modules/docs/docs.routes'
 import { healthRoutes } from '@/modules/health/health.routes'
 import { shopRoutes } from '@/modules/shop/shop.routes'
 import { taskRoutes } from '@/modules/tasks/tasks.routes'
-import { root } from '@/root'
 import { AppError, NotFoundError } from '@/shared/lib/errors'
 import type { AppEnv } from '@/shared/lib/types'
 
@@ -21,8 +18,8 @@ export interface AppDeps {
   config: Config
   db: Db
   logger: Logger
-  /** Built SPA directory served in production. */
-  webDir?: string
+  /** Serves the built SPAs for non-API paths (Bun production only). */
+  assets?: MiddlewareHandler
   /** Outbound HTTP used by payment providers. */
   fetch?: typeof fetch
 }
@@ -31,7 +28,7 @@ export function createApp({
   config,
   db,
   logger,
-  webDir = root.web(),
+  assets,
   fetch: fetcher,
 }: AppDeps) {
   const api = new Hono<AppEnv>()
@@ -77,11 +74,7 @@ export function createApp({
   const app = new Hono<AppEnv>()
   app.route('/api', api)
 
-  const indexHtml = join(webDir, 'index.html')
-  if (config.NODE_ENV === 'production' && existsSync(indexHtml)) {
-    app.use('*', serveStatic({ root: webDir }))
-    app.get('*', (c) => c.html(Bun.file(indexHtml).text()))
-  }
+  if (assets) app.use('*', assets)
 
   app.onError((err, c) => {
     if (err instanceof AppError) {

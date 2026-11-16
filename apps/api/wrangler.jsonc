@@ -1,0 +1,46 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "cdk",
+  "main": "src/worker/index.ts",
+  "compatibility_date": "2026-11-16",
+  "compatibility_flags": ["nodejs_compat"],
+  // Built by `bun run build` at the repo root: dashboard at /, shop at /shop/, admin at /admin/.
+  "assets": {
+    "directory": "../../dist",
+    "binding": "ASSETS",
+    "not_found_handling": "none",
+    "run_worker_first": ["/api", "/api/*"]
+  },
+  // Settles USDT orders once a minute.
+  "triggers": {
+    "crons": ["* * * * *"]
+  },
+  // The database is fixed per deployment. libSQL/Turso is the default: set the
+  // Worker secrets DATABASE_URL and DATABASE_AUTH_TOKEN, migrate with
+  // `bun run db:migrate`. For D1 instead, uncomment this block with the id from
+  // `wrangler d1 create cdk` and migrate with `bun run db:migrate:d1`.
+  // db:migrate:d1:local and dev:worker enable it on a generated copy
+  // (wrangler.d1.jsonc), so they work with it commented out.
+  // "d1_databases": [
+  //   {
+  //     "binding": "DB",
+  //     "database_name": "cdk",
+  //     "migrations_dir": "drizzle",
+  //     "database_id": "00000000-0000-0000-0000-000000000000"
+  //   }
+  // ],
+  // Non-secret settings read by `loadConfig`. Secrets (DATABASE_URL,
+  // DATABASE_AUTH_TOKEN, ADMIN_TOKEN, ALIPAY_PRIVATE_KEY, ...) are synced by
+  // scripts/deploy.sh or set with `wrangler secret put`.
+  "vars": {
+    "NODE_ENV": "production",
+    "LOG_LEVEL": "info",
+    // "APP_URL": "https://cdk.example.com",
+    // Cloudflare Turnstile site key for the test payment; on only together
+    // with the TURNSTILE_SECRET_KEY secret.
+    "TURNSTILE_SITE_KEY": "0x4AAAAAAGCxOAIVVpz2VOEt"
+  },
+  "observability": {
+    "enabled": true
+  }
+}

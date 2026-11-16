@@ -5,7 +5,7 @@ import {
   createRouter,
   RouterProvider,
 } from '@tanstack/react-router'
-import { fireEvent, render, screen } from '@testing-library/react'
+import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { afterEach, expect, it, vi } from 'vitest'
 import { routeTree } from '@/app/routeTree.gen'
 import { browserOrders } from './browser-orders'
@@ -153,10 +153,15 @@ it('looks up guest orders by email and order password', async () => {
 
 it('settles a mock order from the payment page', async () => {
   const mock = { ...order, method: 'mock', payTarget: null }
-  const fetcher = mount(`/orders/${order.orderNo}`, (_url, init) =>
-    ok(init?.method === 'POST' ? { ...paid, method: 'mock' } : mock),
-  )
-  fireEvent.click(await screen.findByRole('button', { name: '模拟支付成功' }))
+  const fetcher = mount(`/orders/${order.orderNo}`, (url, init) => {
+    if (url === '/api/shop/catalog')
+      return ok({ ...catalog, testPayCode: false, turnstileSiteKey: null })
+    return ok(init?.method === 'POST' ? { ...paid, method: 'mock' } : mock)
+  })
+  const button = await screen.findByRole('button', { name: '测试支付成功' })
+  await waitFor(() => expect(button).toBeEnabled())
+  expect(screen.queryByLabelText('测试码')).not.toBeInTheDocument()
+  fireEvent.click(button)
   expect(
     await screen.findByText('CDK-AAAAA-BBBBB-CCCCC-DDDDD'),
   ).toBeInTheDocument()
@@ -164,4 +169,51 @@ it('settles a mock order from the payment page', async () => {
     `/api/shop/orders/${order.orderNo}/mock-pay`,
     expect.objectContaining({ method: 'POST' }),
   )
+})
+
+it('asks for the test code and a Turnstile token before paying', async () => {
+  const mock = { ...order, method: 'mock', payTarget: null }
+  const renderWidget = vi.fn(
+    (
+      _el: HTMLElement,
+      options: { sitekey: string; callback: (t: string) => void },
+    ) => {
+      options.callback(`token-${renderWidget.mock.calls.length}`)
+      return `widget-${renderWidget.mock.calls.length}`
+    },
+  )
+  vi.stubGlobal('turnstile', { render: renderWidget, remove: vi.fn() })
+  let attempts = 0
+  const fetcher = mount(`/orders/${order.orderNo}`, (url, init) => {
+    if (url === '/api/shop/catalog')
+      return ok({ ...catalog, testPayCode: true, turnstileSiteKey: 'site-key' })
+    if (init?.method === 'POST')
+      return attempts++ === 0
+        ? fail(403, 'INVALID_TEST_CODE')
+        : ok({ ...paid, method: 'mock' })
+    return ok(mock)
+  })
+  const button = await screen.findByRole('button', { name: '测试支付成功' })
+  expect(button).toBeDisabled()
+  await waitFor(() => expect(renderWidget).toHaveBeenCalled())
+  expect(renderWidget.mock.calls[0]?.[1].sitekey).toBe('site-key')
+  fireEvent.change(screen.getByLabelText('测试码'), {
+    target: { value: 'wrong-code' },
+  })
+  expect(button).toBeEnabled()
+  fireEvent.click(button)
+  expect(await screen.findByRole('alert')).toHaveTextContent('测试码错误')
+  await waitFor(() => expect(renderWidget).toHaveBeenCalledTimes(2))
+  fireEvent.change(screen.getByLabelText('测试码'), {
+    target: { value: 'test-code-123' },
+  })
+  fireEvent.click(screen.getByRole('button', { name: '测试支付成功' }))
+  expect(
+    await screen.findByText('CDK-AAAAA-BBBBB-CCCCC-DDDDD'),
+  ).toBeInTheDocument()
+  const posts = fetcher.mock.calls.filter(([, i]) => i?.method === 'POST')
+  expect(JSON.parse(String(posts.at(-1)?.[1]?.body))).toEqual({
+    code: 'test-code-123',
+    turnstileToken: 'token-2',
+  })
 })

@@ -37,7 +37,7 @@
     "methods": {
       "alipay": "支付宝",
       "usdt": "USDT (TRC20)",
-      "mock": "模拟支付（仅开发）"
+      "mock": "测试支付"
     },
     "noMethods": "支付渠道暂未开放，请稍后再试。",
     "total": "合计",
@@ -66,8 +66,8 @@
     "usdtAmount": "转账金额 (USDT)",
     "usdtAddress": "收款地址 (TRC20)",
     "usdtWarning": "金额必须与上方完全一致（含小数位），多付或少付都无法自动到账。",
-    "mockHint": "这是开发环境的模拟支付，不会产生真实扣款。点击下方按钮即视为支付成功并发放卡密。",
-    "mockPay": "模拟支付成功",
+    "mockHint": "这是测试支付，不会产生真实扣款。完成验证后点击下方按钮即视为支付成功并发放卡密。",
+    "mockPay": "测试支付成功",
     "mockPaying": "处理中…",
     "waiting": "正在等待支付结果…",
     "paidTitle": "支付成功，卡密如下",
@@ -76,7 +76,8 @@
     "expired": "订单已过期，请重新下单。请勿再向该订单付款。",
     "reorder": "重新选购",
     "copy": "复制",
-    "copied": "已复制"
+    "copied": "已复制",
+    "testCode": "测试码"
   },
   "query": {
     "title": "订单查询",
@@ -103,6 +104,8 @@
     "PAYMENT_UNAVAILABLE": "支付发起失败，请稍后重试或更换支付方式。",
     "NOT_FOUND": "内容不存在。",
     "NETWORK": "请求失败，请检查网络后重试。",
-    "ORDER_NOT_PENDING": "订单已支付或已过期。"
+    "ORDER_NOT_PENDING": "订单已支付或已过期。",
+    "INVALID_TEST_CODE": "测试码错误。",
+    "TURNSTILE_FAILED": "人机验证失败，请重新验证后再试。"
   }
 }

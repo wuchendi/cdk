@@ -18,6 +18,8 @@ const schema = z.object({
   LOG_LEVEL: z
     .enum(['fatal', 'error', 'warn', 'info', 'debug', 'trace', 'silent'])
     .default('info'),
+  DATABASE_URL: optional,
+  DATABASE_AUTH_TOKEN: optional,
   CORS_ORIGINS: z
     .string()
     .default('')
@@ -41,6 +43,9 @@ const schema = z.object({
   TRONGRID_API_KEY: optional,
   ADMIN_TOKEN: optional.pipe(z.string().min(16).optional()),
   SHOP_MOCK_PAY: optional.transform((v) => v === 'true'),
+  SHOP_TEST_PAY_CODE: optional.pipe(z.string().min(8).optional()),
+  TURNSTILE_SITE_KEY: optional,
+  TURNSTILE_SECRET_KEY: optional,
 })
 
 export type Config = z.infer<typeof schema> & { VERSION: string }

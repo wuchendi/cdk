@@ -3,17 +3,18 @@ import type { TaskList } from '@cdk/shared'
 import { eq } from 'drizzle-orm'
 import { createApp } from '@/app'
 import { loadConfig } from '@/config'
-import { createDb } from '@/db'
+import { createDb } from '@/db/bun'
 import { cdkeys, tasks } from '@/db/schema'
 import { createLogger } from '@/logger'
 
-const { db, close } = createDb(':memory:')
+const { db, close } = await createDb(':memory:')
 const app = createApp({
   config: loadConfig({ NODE_ENV: 'test' }),
   db,
   logger: createLogger('silent'),
 })
-db.insert(cdkeys)
+await db
+  .insert(cdkeys)
   .values([
     { code: 'alpha', balance: 3 },
     { code: 'beta', balance: 0 },
@@ -70,7 +71,11 @@ describe('task management', () => {
     expect(task.status).toBe('pending')
     expect(task.email).toBe('a@example.com')
     expect(task).not.toHaveProperty('password')
-    const stored = db.select().from(tasks).where(eq(tasks.id, task.id)).get()
+    const stored = await db
+      .select()
+      .from(tasks)
+      .where(eq(tasks.id, task.id))
+      .get()
     expect(stored).toMatchObject({
       email: 'a@example.com',
       password: 'My Pass',
@@ -119,7 +124,7 @@ describe('task management', () => {
     ).toBe(3)
   })
   it('cannot cancel running work and validates query and ids', async () => {
-    const row = db
+    const row = await db
       .insert(tasks)
       .values({
         cdkeyId: 1,
@@ -133,6 +138,56 @@ describe('task management', () => {
     expect((await request('/tasks/abc', 'DELETE')).status).toBe(422)
     expect((await request('/tasks?status=unknown')).status).toBe(422)
     expect((await request('/tasks?page=0')).status).toBe(422)
+  })
+  it('debits once for concurrent duplicates and refunds once for concurrent cancels', async () => {
+    await db.insert(cdkeys).values({ code: 'gamma', balance: 1 }).run()
+    const submit = () =>
+      request(
+        '/tasks',
+        'POST',
+        {
+          credential: 'race@example.com----pw----JBSWY3DPEHPK3PXP',
+          taskType: 'sub6',
+        },
+        'gamma',
+      )
+    const results = await Promise.all([submit(), submit(), submit()])
+    const codes = await Promise.all(
+      results.map(async (r) =>
+        r.status === 200
+          ? 'ok'
+          : ((await r.json()) as { error: { code: string } }).error.code,
+      ),
+    )
+    expect(codes.filter((c) => c === 'ok')).toHaveLength(1)
+    expect(codes.filter((c) => c !== 'ok')).toEqual([
+      'DUPLICATE_TASK',
+      'DUPLICATE_TASK',
+    ])
+    const balance = async () =>
+      (await db.select().from(cdkeys).where(eq(cdkeys.code, 'gamma')).get())
+        ?.balance
+    expect(await balance()).toBe(0)
+    const other = await request(
+      '/tasks',
+      'POST',
+      {
+        credential: 'other@example.com----pw----JBSWY3DPEHPK3PXP',
+        taskType: 'sub6',
+      },
+      'gamma',
+    )
+    expect(
+      ((await other.json()) as { error: { code: string } }).error.code,
+    ).toBe('INSUFFICIENT_BALANCE')
+    const created = results.find((r) => r.status === 200)
+    const { id } = ((await created?.json()) as { data: { id: number } }).data
+    const cancels = await Promise.all([
+      request(`/tasks/${id}`, 'DELETE', undefined, 'gamma'),
+      request(`/tasks/${id}`, 'DELETE', undefined, 'gamma'),
+    ])
+    expect(cancels.filter((r) => r.status === 200)).toHaveLength(1)
+    expect(await balance()).toBe(1)
   })
   it('documents the protected endpoints', async () => {
     const spec = (await (await app.request('/api/openapi.json')).json()) as {

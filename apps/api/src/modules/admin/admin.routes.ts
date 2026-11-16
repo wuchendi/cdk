@@ -93,12 +93,18 @@ export function adminRoutes(token: string) {
   })
 
   type Db = AppEnv['Variables']['db']
-  const presentProducts = (db: Db, rows: (typeof products.$inferSelect)[]) => {
-    const sold = soldByProduct(db)
+  const presentProducts = async (
+    db: Db,
+    rows: (typeof products.$inferSelect)[],
+  ) => {
+    const sold = await soldByProduct(db)
     return rows.map((p) => ({ ...p, sold: sold.get(p.id) ?? 0 }))
   }
-  const presentAdminOrders = (db: Db, rows: (typeof orders.$inferSelect)[]) =>
-    presentOrders(db, rows).map((view, index) => ({
+  const presentAdminOrders = async (
+    db: Db,
+    rows: (typeof orders.$inferSelect)[],
+  ) =>
+    (await presentOrders(db, rows)).map((view, index) => ({
       ...view,
       email: rows[index]?.email ?? '',
       tradeNo: rows[index]?.tradeNo ?? null,
@@ -113,30 +119,33 @@ export function adminRoutes(token: string) {
   router.get(
     '/admin/products',
     doc('List all products', z.array(adminProductSchema)),
-    (c) => {
+    async (c) => {
       const db = c.get('db')
-      const rows = db
+      const rows = await db
         .select()
         .from(products)
         .orderBy(asc(products.sort), asc(products.id))
         .all()
-      return c.json({ success: true as const, data: presentProducts(db, rows) })
+      return c.json({
+        success: true as const,
+        data: await presentProducts(db, rows),
+      })
     },
   )
   router.post(
     '/admin/products',
     doc('Create a product', adminProductSchema),
     validate('json', productInput),
-    (c) => {
+    async (c) => {
       const db = c.get('db')
-      const row = db
+      const row = await db
         .insert(products)
         .values(c.req.valid('json'))
         .returning()
         .get()
       return c.json({
         success: true as const,
-        data: presentProducts(db, [row])[0],
+        data: (await presentProducts(db, [row]))[0],
       })
     },
   )
@@ -145,9 +154,9 @@ export function adminRoutes(token: string) {
     doc('Edit, list or unlist a product', adminProductSchema),
     validate('param', idParam),
     validate('json', productPatch),
-    (c) => {
+    async (c) => {
       const db = c.get('db')
-      const row = db
+      const row = await db
         .update(products)
         .set(c.req.valid('json'))
         .where(eq(products.id, c.req.valid('param').id))
@@ -156,7 +165,7 @@ export function adminRoutes(token: string) {
       if (!row) throw new NotFoundError('Product not found')
       return c.json({
         success: true as const,
-        data: presentProducts(db, [row])[0],
+        data: (await presentProducts(db, [row]))[0],
       })
     },
   )
@@ -173,7 +182,7 @@ export function adminRoutes(token: string) {
       }),
     ),
     validate('query', orderQuery),
-    (c) => {
+    async (c) => {
       const { status, search, page } = c.req.valid('query')
       const db = c.get('db')
       const now = new Date()
@@ -194,12 +203,14 @@ export function adminRoutes(token: string) {
           : undefined,
       )
       const total =
-        db
-          .select({ count: sql<number>`count(*)` })
-          .from(orders)
-          .where(filter)
-          .get()?.count ?? 0
-      const rows = db
+        (
+          await db
+            .select({ count: sql<number>`count(*)` })
+            .from(orders)
+            .where(filter)
+            .get()
+        )?.count ?? 0
+      const rows = await db
         .select()
         .from(orders)
         .where(filter)
@@ -210,7 +221,7 @@ export function adminRoutes(token: string) {
       return c.json({
         success: true as const,
         data: {
-          items: presentAdminOrders(db, rows),
+          items: await presentAdminOrders(db, rows),
           total,
           page,
           pageSize: PAGE_SIZE,
@@ -222,18 +233,18 @@ export function adminRoutes(token: string) {
     '/admin/orders/:orderNo/settle',
     doc('Settle an unpaid order by hand and issue its keys', adminOrderSchema),
     validate('param', z.object({ orderNo: z.string().max(64) })),
-    (c) => {
+    async (c) => {
       const db = c.get('db')
       const byNo = eq(orders.orderNo, c.req.valid('param').orderNo)
-      const order = db.select().from(orders).where(byNo).get()
+      const order = await db.select().from(orders).where(byNo).get()
       if (!order) throw new NotFoundError('Order not found')
-      if (!fulfilOrder(db, order.id, `manual:${order.orderNo}`))
+      if (!(await fulfilOrder(db, order.id, `manual:${order.orderNo}`)))
         throw new AppError(409, 'ORDER_ALREADY_PAID', 'Order is already paid')
       c.get('logger').warn({ orderNo: order.orderNo }, 'order settled by hand')
-      const rows = db.select().from(orders).where(byNo).all()
+      const rows = await db.select().from(orders).where(byNo).all()
       return c.json({
         success: true as const,
-        data: presentAdminOrders(db, rows)[0],
+        data: (await presentAdminOrders(db, rows))[0],
       })
     },
   )
@@ -287,7 +298,7 @@ export function adminRoutes(token: string) {
       }),
     ),
     validate('query', taskQuery),
-    (c) => {
+    async (c) => {
       const { status, search, page } = c.req.valid('query')
       const db = c.get('db')
       const like_ = `%${search.replace(/[\\%_]/g, '\\$&')}%`
@@ -301,13 +312,15 @@ export function adminRoutes(token: string) {
           : undefined,
       )
       const total =
-        db
-          .select({ count: sql<number>`count(*)` })
-          .from(tasks)
-          .innerJoin(cdkeys, eq(tasks.cdkeyId, cdkeys.id))
-          .where(filter)
-          .get()?.count ?? 0
-      const rows = db
+        (
+          await db
+            .select({ count: sql<number>`count(*)` })
+            .from(tasks)
+            .innerJoin(cdkeys, eq(tasks.cdkeyId, cdkeys.id))
+            .where(filter)
+            .get()
+        )?.count ?? 0
+      const rows = await db
         .select(taskColumns)
         .from(tasks)
         .innerJoin(cdkeys, eq(tasks.cdkeyId, cdkeys.id))
@@ -332,12 +345,12 @@ export function adminRoutes(token: string) {
     doc('Update a task status and run note', adminTaskSchema),
     validate('param', idParam),
     validate('json', taskPatch),
-    (c) => {
+    async (c) => {
       const { id } = c.req.valid('param')
       const { status, message } = c.req.valid('json')
       const db = c.get('db')
       const done = status === 'success' || status === 'failed'
-      const updated = db
+      const updated = await db
         .update(tasks)
         .set({
           status,
@@ -349,7 +362,7 @@ export function adminRoutes(token: string) {
         .get()
       if (!updated) throw new NotFoundError('Task not found')
       c.get('logger').warn({ taskId: id, status }, 'task updated by admin')
-      const row = taskById(db, id)
+      const row = await taskById(db, id)
       if (!row) throw new NotFoundError('Task not found')
       return c.json({ success: true as const, data: serializeTask(row) })
     },

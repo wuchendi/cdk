@@ -43,7 +43,7 @@ export interface TaskList {
   stats: Record<TaskStatus | 'total', number>
 }
 
-/** `mock` settles without money and exists only in development. */
+/** `mock` settles without money: in development, or behind the test code. */
 export const PAY_METHODS = ['alipay', 'usdt', 'mock'] as const
 export type PayMethod = (typeof PAY_METHODS)[number]
 
@@ -63,6 +63,10 @@ export interface ShopProduct {
 export interface ShopCatalog {
   products: ShopProduct[]
   methods: PayMethod[]
+  /** `mock` payment asks for the test code. */
+  testPayCode: boolean
+  /** Turnstile site key for the `mock` payment; null when Turnstile is off. */
+  turnstileSiteKey: string | null
 }
 
 export interface ShopOrder {

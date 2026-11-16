@@ -4,6 +4,8 @@ import react from '@vitejs/plugin-react'
 import { defineConfig } from 'vitest/config'
 
 export default defineConfig({
+  // served under /shop/ next to the dashboard
+  base: '/shop/',
   plugins: [
     tanstackRouter({
       target: 'react',

@@ -1,13 +1,23 @@
 import { createApp } from '@/app'
 import { loadConfig } from '@/config'
-import { createDb } from '@/db'
+import { createDb } from '@/db/bun'
 import { createLogger } from '@/logger'
 import { payMethods, syncUsdt } from '@/modules/shop/payments'
+import { root } from '@/root'
+import { spaAssets } from '@/static'
 
 const config = loadConfig()
 const logger = createLogger(config.LOG_LEVEL)
-const { db, close } = createDb()
-const app = createApp({ config, db, logger })
+const { db, close } = await createDb(
+  config.DATABASE_URL,
+  config.DATABASE_AUTH_TOKEN,
+)
+const app = createApp({
+  config,
+  db,
+  logger,
+  assets: config.NODE_ENV === 'production' ? spaAssets(root.web()) : undefined,
+})
 
 const server = Bun.serve({ port: config.PORT, fetch: app.fetch })
 logger.info({ url: server.url.href, env: config.NODE_ENV }, 'cdk api started')

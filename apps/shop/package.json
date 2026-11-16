@@ -5,7 +5,7 @@
   "private": true,
   "description": "Key shop for cdk.",
   "scripts": {
-    "dev": "nsl run --name cdk-shop vite",
+    "dev": "nsl run --name cdk:/shop vite",
     "dev:bare": "vite",
     "build": "vite build",
     "preview": "vite preview",

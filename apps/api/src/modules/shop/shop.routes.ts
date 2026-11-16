@@ -1,6 +1,6 @@
 import { randomBytes } from 'node:crypto'
 import { ORDER_STATUSES, PAY_METHODS } from '@cdk/shared'
-import { and, asc, desc, eq, gt, isNotNull } from 'drizzle-orm'
+import { and, asc, desc, eq, gt, isNotNull, ne } from 'drizzle-orm'
 import type { Context } from 'hono'
 import { Hono } from 'hono'
 import { validator } from 'hono-openapi'
@@ -8,6 +8,9 @@ import * as z from 'zod'
 import { orders, products } from '@/db/schema'
 import { AppError, NotFoundError } from '@/shared/lib/errors'
 import { describeRoute, jsonOk } from '@/shared/lib/openapi'
+import { hashPassword, verifyPassword } from '@/shared/lib/password'
+import { sameSecret } from '@/shared/lib/secret'
+import { turnstileSiteKey, verifyTurnstile } from '@/shared/lib/turnstile'
 import type { AppEnv } from '@/shared/lib/types'
 import { presentOrders, soldByProduct } from './orders'
 import {
@@ -32,6 +35,10 @@ const orderInput = z.object({
   method: z.enum(PAY_METHODS),
   email,
   password: orderPassword,
+})
+const testPayInput = z.object({
+  code: z.string().max(128).optional(),
+  turnstileToken: z.string().max(4096).optional(),
 })
 export const productSchema = z.object({
   id: z.number(),
@@ -82,28 +89,36 @@ export function shopRoutes(fetcher: typeof fetch = fetch) {
       z.object({
         products: z.array(productSchema),
         methods: z.array(z.enum(PAY_METHODS)),
+        testPayCode: z.boolean(),
+        turnstileSiteKey: z.string().nullable(),
       }),
     ),
-    (c) => {
+    async (c) => {
       const db = c.get('db')
-      const sold = soldByProduct(db)
-      const items = db
+      const config = c.get('config')
+      const sold = await soldByProduct(db)
+      const rows = await db
         .select()
         .from(products)
         .where(eq(products.active, true))
         .orderBy(asc(products.sort), asc(products.id))
         .all()
-        .map((p) => ({
-          id: p.id,
-          name: p.name,
-          description: p.description,
-          credits: p.credits,
-          price: p.price,
-          sold: sold.get(p.id) ?? 0,
-        }))
+      const items = rows.map((p) => ({
+        id: p.id,
+        name: p.name,
+        description: p.description,
+        credits: p.credits,
+        price: p.price,
+        sold: sold.get(p.id) ?? 0,
+      }))
       return c.json({
         success: true as const,
-        data: { products: items, methods: payMethods(c.get('config')) },
+        data: {
+          products: items,
+          methods: payMethods(config),
+          testPayCode: Boolean(config.SHOP_TEST_PAY_CODE),
+          turnstileSiteKey: turnstileSiteKey(config),
+        },
       })
     },
   )
@@ -116,7 +131,7 @@ export function shopRoutes(fetcher: typeof fetch = fetch) {
       const input = c.req.valid('json')
       const db = c.get('db')
       const config = c.get('config')
-      const product = db
+      const product = await db
         .select()
         .from(products)
         .where(and(eq(products.id, input.productId), eq(products.active, true)))
@@ -128,55 +143,82 @@ export function shopRoutes(fetcher: typeof fetch = fetch) {
           'METHOD_UNAVAILABLE',
           'Payment method is not available',
         )
-      const passwordHash = await Bun.password.hash(input.password)
+      const passwordHash = await hashPassword(input.password)
       const amount = product.price * input.quantity
       const usdt = input.method === 'usdt'
-      const order = db.transaction(
-        (tx) => {
-          const taken = usdt
-            ? tx
-                .select({ payAmount: orders.payAmount })
-                .from(orders)
-                .where(
-                  and(
-                    eq(orders.method, 'usdt'),
-                    eq(orders.status, 'pending'),
-                    gt(orders.expiresAt, new Date()),
-                  ),
-                )
-                .all()
-                .map((o) => o.payAmount)
-            : []
-          return tx
-            .insert(orders)
-            .values({
-              orderNo:
-                new Date().toISOString().slice(0, 10).replaceAll('-', '') +
-                randomBytes(12).toString('hex').toUpperCase(),
-              email: input.email,
-              passwordHash,
-              productId: product.id,
-              productName: product.name,
-              credits: product.credits,
-              quantity: input.quantity,
-              amount,
-              method: input.method,
-              payAmount: usdt
-                ? usdtAmount(taken, amount, config.USDT_CNY_RATE ?? 1)
-                : amount,
-              payUrl: usdt ? config.USDT_TRC20_ADDRESS : null,
-              expiresAt: new Date(Date.now() + ORDER_TTL_MS),
-            })
-            .returning()
-            .get()
-        },
-        { behavior: 'immediate' },
-      )
+      const rate = config.USDT_CNY_RATE ?? 1
+      const openUsdt = (except = 0) =>
+        db
+          .select({ id: orders.id, payAmount: orders.payAmount })
+          .from(orders)
+          .where(
+            and(
+              eq(orders.method, 'usdt'),
+              eq(orders.status, 'pending'),
+              gt(orders.expiresAt, new Date()),
+              ne(orders.id, except),
+            ),
+          )
+          .all()
+      const order = await db
+        .insert(orders)
+        .values({
+          orderNo:
+            new Date().toISOString().slice(0, 10).replaceAll('-', '') +
+            randomBytes(12).toString('hex').toUpperCase(),
+          email: input.email,
+          passwordHash,
+          productId: product.id,
+          productName: product.name,
+          credits: product.credits,
+          quantity: input.quantity,
+          amount,
+          method: input.method,
+          payAmount: usdt
+            ? usdtAmount(
+                (await openUsdt()).map((o) => o.payAmount),
+                amount,
+                rate,
+              )
+            : amount,
+          payUrl: usdt ? config.USDT_TRC20_ADDRESS : null,
+          expiresAt: new Date(Date.now() + ORDER_TTL_MS),
+        })
+        .returning()
+        .get()
+      // A concurrent order may hold the same amount; the newer one moves.
+      for (let attempt = 0; usdt; attempt++) {
+        const others = await openUsdt(order.id)
+        if (
+          !others.some(
+            (o) => o.payAmount === order.payAmount && o.id < order.id,
+          )
+        )
+          break
+        if (attempt === 5) {
+          await db.delete(orders).where(eq(orders.id, order.id)).run()
+          throw new AppError(
+            503,
+            'PAYMENT_UNAVAILABLE',
+            'Payment could not be started',
+          )
+        }
+        order.payAmount = usdtAmount(
+          others.map((o) => o.payAmount),
+          amount,
+          rate,
+        )
+        await db
+          .update(orders)
+          .set({ payAmount: order.payAmount })
+          .where(eq(orders.id, order.id))
+          .run()
+      }
       if (input.method === 'alipay') {
         try {
           order.payUrl = await alipayPrecreate(config, fetcher, order)
         } catch (err) {
-          db.delete(orders).where(eq(orders.id, order.id)).run()
+          await db.delete(orders).where(eq(orders.id, order.id)).run()
           c.get('logger').error({ err }, 'alipay precreate failed')
           throw new AppError(
             502,
@@ -184,12 +226,13 @@ export function shopRoutes(fetcher: typeof fetch = fetch) {
             'Payment could not be started',
           )
         }
-        db.update(orders)
+        await db
+          .update(orders)
           .set({ payUrl: order.payUrl })
           .where(eq(orders.id, order.id))
           .run()
       }
-      return ok(c, presentOrders(c.get('db'), [order])[0])
+      return ok(c, (await presentOrders(c.get('db'), [order]))[0])
     },
   )
   router.post(
@@ -198,7 +241,7 @@ export function shopRoutes(fetcher: typeof fetch = fetch) {
     validate('json', z.object({ email, password: orderPassword })),
     async (c) => {
       const input = c.req.valid('json')
-      const rows = c
+      const rows = await c
         .get('db')
         .select()
         .from(orders)
@@ -210,35 +253,44 @@ export function shopRoutes(fetcher: typeof fetch = fetch) {
         .all()
       const matches = []
       for (const row of rows)
-        if (await Bun.password.verify(input.password, row.passwordHash ?? ''))
+        if (await verifyPassword(input.password, row.passwordHash ?? ''))
           matches.push(row)
-      return ok(c, presentOrders(c.get('db'), matches))
+      return ok(c, await presentOrders(c.get('db'), matches))
     },
   )
   router.get(
     '/shop/orders/:orderNo',
     doc('Read an order by its number', orderSchema),
     validate('param', z.object({ orderNo: z.string().max(64) })),
-    (c) => {
-      const order = c
+    async (c) => {
+      const order = await c
         .get('db')
         .select()
         .from(orders)
         .where(eq(orders.orderNo, c.req.valid('param').orderNo))
         .get()
       if (!order) throw new NotFoundError('Order not found')
-      return ok(c, presentOrders(c.get('db'), [order])[0])
+      return ok(c, (await presentOrders(c.get('db'), [order]))[0])
     },
   )
 
   router.post(
     '/shop/orders/:orderNo/mock-pay',
-    doc('Settle a mock order (development only)', orderSchema),
+    doc(
+      'Settle a test order (development, or with the test code and Turnstile)',
+      orderSchema,
+    ),
     validate('param', z.object({ orderNo: z.string().max(64) })),
-    (c) => {
+    async (c) => {
       const db = c.get('db')
-      const order = payMethods(c.get('config')).includes('mock')
-        ? db
+      const config = c.get('config')
+      // The body is optional: development settles without one.
+      const body = testPayInput.safeParse(await c.req.json().catch(() => ({})))
+      if (!body.success)
+        throw new AppError(422, 'INVALID_INPUT', 'Invalid request input')
+      const { code, turnstileToken } = body.data
+      const order = payMethods(config).includes('mock')
+        ? await db
             .select()
             .from(orders)
             .where(
@@ -251,16 +303,35 @@ export function shopRoutes(fetcher: typeof fetch = fetch) {
         : undefined
       if (!order) throw new NotFoundError('Order not found')
       if (
+        config.SHOP_TEST_PAY_CODE &&
+        !sameSecret(code ?? '', config.SHOP_TEST_PAY_CODE)
+      )
+        throw new AppError(403, 'INVALID_TEST_CODE', 'Invalid test code')
+      if (
+        !(await verifyTurnstile(
+          config,
+          fetcher,
+          c.get('logger'),
+          turnstileToken,
+          c.req.header('CF-Connecting-IP'),
+        ))
+      )
+        throw new AppError(400, 'TURNSTILE_FAILED', 'Human verification failed')
+      if (
         order.expiresAt.getTime() <= Date.now() ||
-        !fulfilOrder(db, order.id, `mock:${order.orderNo}`)
+        !(await fulfilOrder(db, order.id, `mock:${order.orderNo}`))
       )
         throw new AppError(
           409,
           'ORDER_NOT_PENDING',
           'Order is not awaiting payment',
         )
-      const paid = db.select().from(orders).where(eq(orders.id, order.id)).all()
-      return ok(c, presentOrders(c.get('db'), paid)[0])
+      const paid = await db
+        .select()
+        .from(orders)
+        .where(eq(orders.id, order.id))
+        .all()
+      return ok(c, (await presentOrders(c.get('db'), paid))[0])
     },
   )
 
@@ -279,7 +350,7 @@ export function shopRoutes(fetcher: typeof fetch = fetch) {
       const db = c.get('db')
       const order =
         alipayVerify(config, params) && params.app_id === config.ALIPAY_APP_ID
-          ? db
+          ? await db
               .select()
               .from(orders)
               .where(
@@ -305,7 +376,7 @@ export function shopRoutes(fetcher: typeof fetch = fetch) {
         params.trade_status === 'TRADE_SUCCESS' ||
         params.trade_status === 'TRADE_FINISHED'
       )
-        fulfilOrder(db, order.id, params.trade_no)
+        await fulfilOrder(db, order.id, params.trade_no)
       return c.text('success')
     },
   )

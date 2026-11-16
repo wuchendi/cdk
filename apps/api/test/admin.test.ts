@@ -9,12 +9,12 @@ import type {
 import { eq } from 'drizzle-orm'
 import { createApp } from '@/app'
 import { loadConfig } from '@/config'
-import { createDb } from '@/db'
+import { createDb } from '@/db/bun'
 import { cdkeys, orders } from '@/db/schema'
 import { createLogger } from '@/logger'
 
 const TOKEN = 'admin-token-0123456789'
-const { db, close } = createDb(':memory:')
+const { db, close } = await createDb(':memory:')
 const logger = createLogger('silent')
 const app = createApp({
   config: loadConfig({
@@ -138,7 +138,8 @@ describe('admin orders', () => {
     const first = await buy('one@example.com')
     const second = await buy('two@example.com')
     const stale = await buy('old@example.com')
-    db.update(orders)
+    await db
+      .update(orders)
       .set({ expiresAt: new Date(Date.now() - 1000) })
       .where(eq(orders.orderNo, stale.orderNo))
       .run()
@@ -175,7 +176,7 @@ describe('admin orders', () => {
     expect((await settle(stale.orderNo)).code).toBe('ORDER_ALREADY_PAID')
     expect((await settle('missing')).status).toBe(404)
     expect(
-      db.select().from(cdkeys).where(eq(cdkeys.balance, 1)).all(),
+      await db.select().from(cdkeys).where(eq(cdkeys.balance, 1)).all(),
     ).toHaveLength(2)
     expect(
       (
@@ -192,7 +193,7 @@ describe('admin orders', () => {
 
 describe('admin tasks', () => {
   it('lists credentials, filters, searches and updates status', async () => {
-    db.insert(cdkeys).values({ code: 'taskkey', balance: 5 }).run()
+    await db.insert(cdkeys).values({ code: 'taskkey', balance: 5 }).run()
     const submit = (credential: string) =>
       app.request('/api/tasks', {
         method: 'POST',

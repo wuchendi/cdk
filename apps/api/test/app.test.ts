@@ -2,13 +2,15 @@ import { afterAll, describe, expect, it } from 'bun:test'
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
+import { sql } from 'drizzle-orm'
 import { createApp } from '@/app'
 import { loadConfig } from '@/config'
-import { createDb } from '@/db'
+import { createDb } from '@/db/bun'
 import { createLogger } from '@/logger'
+import { spaAssets } from '@/static'
 
 const config = loadConfig({ NODE_ENV: 'test' })
-const { db, close } = createDb(':memory:')
+const { db, close } = await createDb(':memory:')
 const app = createApp({
   config,
   db,
@@ -62,10 +64,10 @@ describe('api', () => {
     })
   })
 
-  it('migrates the schema', () => {
-    const tables = db.$client
-      .query("select name from sqlite_master where type = 'table'")
-      .all() as { name: string }[]
+  it('migrates the schema', async () => {
+    const tables = await db.all<{ name: string }>(
+      sql`select name from sqlite_master where type = 'table'`,
+    )
     expect(tables.map((t) => t.name)).toEqual(
       expect.arrayContaining(['cdkeys', 'tasks']),
     )
@@ -81,13 +83,15 @@ describe('config', () => {
 describe('production mode', () => {
   const webDir = mkdtempSync(join(tmpdir(), 'cdk-web-'))
   mkdirSync(join(webDir, 'assets'))
+  mkdirSync(join(webDir, 'shop'))
   writeFileSync(join(webDir, 'index.html'), '<title>spa</title>')
+  writeFileSync(join(webDir, 'shop', 'index.html'), '<title>shop</title>')
   writeFileSync(join(webDir, 'assets', 'app.js'), 'console.log(1)')
   const prod = createApp({
     config: loadConfig({ NODE_ENV: 'production' }),
     db,
     logger: createLogger('silent'),
-    webDir,
+    assets: spaAssets(webDir),
   })
 
   afterAll(() => rmSync(webDir, { recursive: true, force: true }))
@@ -107,6 +111,12 @@ describe('production mode', () => {
     const res = await prod.request('/some/client/route')
     expect(res.status).toBe(200)
     expect(await res.text()).toContain('<title>spa</title>')
+  })
+
+  it('falls back to the index of the SPA under its prefix', async () => {
+    const res = await prod.request('/shop/orders/123')
+    expect(res.status).toBe(200)
+    expect(await res.text()).toContain('<title>shop</title>')
   })
 })
 

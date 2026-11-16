@@ -55,7 +55,7 @@
     "methods": {
       "alipay": "支付宝",
       "usdt": "USDT",
-      "mock": "模拟支付"
+      "mock": "测试支付"
     },
     "search": "搜索订单编号或邮箱",
     "searchSubmit": "搜索",

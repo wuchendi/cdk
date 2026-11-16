@@ -1,0 +1,87 @@
+name: Deploy
+
+# Manual deploy of the Worker (API + SPAs) to Cloudflare. Never runs automatically.
+#
+# Deploy credentials (repository secrets):
+#   CLOUDFLARE_API_TOKEN   — token with Workers Scripts:Edit (+ D1:Edit when the
+#                            d1_databases block in wrangler.jsonc is enabled).
+#   CLOUDFLARE_ACCOUNT_ID  — the target account id.
+#
+# Runtime Worker secrets — set these as repository secrets; scripts/deploy.sh
+# pushes them with `wrangler secret bulk` after each deploy. Empty/unset secrets
+# are skipped, so an unset value never wipes the current Worker secret.
+#   DATABASE_URL           — libSQL/Turso URL (default driver; also used to migrate)
+#   DATABASE_AUTH_TOKEN    — libSQL/Turso auth token
+#   ADMIN_TOKEN            — admin console token (>= 16 chars; unset = no admin API)
+#   ALIPAY_PRIVATE_KEY     — Alipay app private key
+#   ALIPAY_PUBLIC_KEY      — Alipay public key
+#   TRONGRID_API_KEY       — TronGrid API key (optional)
+#   SHOP_TEST_PAY_CODE     — enables the test payment (>= 8 chars); remove after testing
+#   TURNSTILE_SECRET_KEY   — Turnstile secret for the test payment (site key is a var)
+# Plain settings (APP_URL, ALIPAY_APP_ID, USDT_*, TURNSTILE_SITE_KEY, ...) live in
+# wrangler.jsonc `vars`.
+
+on:
+  workflow_dispatch:
+    inputs:
+      run_migrations:
+        description: "Apply database migrations (libSQL, or D1 when enabled in wrangler.jsonc) before deploy"
+        type: boolean
+        default: false
+
+concurrency:
+  group: deploy-${{ github.ref }}
+  # Never cancel a deploy halfway.
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    environment: production
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
+        with:
+          bun-version: 1.4.4
+
+      - uses: actions/cache@v6
+        with:
+          path: ~/.bun/install/cache
+          key: ${{ runner.os }}-bun-${{ hashFiles('bun.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-bun-
+
+      # Secrets are scoped to this step only, never to the setup actions.
+      - name: Build, migrate, deploy and sync secrets
+        env:
+          RUN_MIGRATIONS: ${{ inputs.run_migrations }}
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          DATABASE_AUTH_TOKEN: ${{ secrets.DATABASE_AUTH_TOKEN }}
+          ADMIN_TOKEN: ${{ secrets.ADMIN_TOKEN }}
+          ALIPAY_PRIVATE_KEY: ${{ secrets.ALIPAY_PRIVATE_KEY }}
+          ALIPAY_PUBLIC_KEY: ${{ secrets.ALIPAY_PUBLIC_KEY }}
+          TRONGRID_API_KEY: ${{ secrets.TRONGRID_API_KEY }}
+          SHOP_TEST_PAY_CODE: ${{ secrets.SHOP_TEST_PAY_CODE }}
+          TURNSTILE_SECRET_KEY: ${{ secrets.TURNSTILE_SECRET_KEY }}
+        run: |
+          WORKER_SECRETS=$(jq -n '{
+            DATABASE_URL: env.DATABASE_URL,
+            DATABASE_AUTH_TOKEN: env.DATABASE_AUTH_TOKEN,
+            ADMIN_TOKEN: env.ADMIN_TOKEN,
+            ALIPAY_PRIVATE_KEY: env.ALIPAY_PRIVATE_KEY,
+            ALIPAY_PUBLIC_KEY: env.ALIPAY_PUBLIC_KEY,
+            TRONGRID_API_KEY: env.TRONGRID_API_KEY,
+            SHOP_TEST_PAY_CODE: env.SHOP_TEST_PAY_CODE,
+            TURNSTILE_SECRET_KEY: env.TURNSTILE_SECRET_KEY
+          }')
+          export WORKER_SECRETS
+          flags=(--skip-check)
+          if [ "$RUN_MIGRATIONS" != "true" ]; then flags+=(--no-migrate); fi
+          bash scripts/deploy.sh "${flags[@]}"

@@ -20,8 +20,14 @@ export const shopApi = {
   createOrder: (input: OrderInput) => post<ShopOrder>('/shop/orders', input),
   order: (orderNo: string) =>
     apiFetch<ShopOrder>(`/shop/orders/${encodeURIComponent(orderNo)}`),
-  mockPay: (orderNo: string) =>
-    post<ShopOrder>(`/shop/orders/${encodeURIComponent(orderNo)}/mock-pay`),
+  mockPay: (
+    orderNo: string,
+    input: { code?: string; turnstileToken?: string } = {},
+  ) =>
+    post<ShopOrder>(
+      `/shop/orders/${encodeURIComponent(orderNo)}/mock-pay`,
+      input,
+    ),
   lookup: (email: string, password: string) =>
     post<ShopOrder[]>('/shop/orders/lookup', { email, password }),
 }

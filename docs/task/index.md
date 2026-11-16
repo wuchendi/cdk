@@ -46,3 +46,7 @@ Each task is a single line linking to its detail file. All detailed information 
 - [x] [**20261111-1050-task-credential-format Require email/password/2FA for a task**](20261111-1050-task-credential-format.md) `P1`
 - [x] [**20261111-1108-admin-task-view Admin task management view**](20261111-1108-admin-task-view.md) `P1`
 - [x] [**20261111-1123-integrate-execution-worker Integrate the execution worker**](20261111-1123-integrate-execution-worker.md) `P1`
+- [x] [**20261116-0212-deploy-cloudflare-workers Deploy on Cloudflare Workers with D1/Turso**](20261116-0212-deploy-cloudflare-workers.md) `P1`
+- [x] [**20261116-0246-add-deploy-script Add a one-command build and deploy script**](20261116-0246-add-deploy-script.md) `P1`
+- [x] [**20261116-0252-split-deploy-workflow Manual deploy workflow and libSQL by default**](20261116-0252-split-deploy-workflow.md) `P1`
+- [x] [**20261116-0310-production-test-payment Test payment flow on a deployment without payment config**](20261116-0310-production-test-payment.md) `P1`

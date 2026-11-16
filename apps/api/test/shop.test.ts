@@ -1,10 +1,10 @@
 import { afterAll, describe, expect, it } from 'bun:test'
 import { createSign, createVerify, generateKeyPairSync } from 'node:crypto'
 import type { ShopCatalog, ShopOrder } from '@cdk/shared'
-import { eq } from 'drizzle-orm'
+import { eq, inArray } from 'drizzle-orm'
 import { createApp } from '@/app'
 import { loadConfig } from '@/config'
-import { createDb } from '@/db'
+import { createDb } from '@/db/bun'
 import { cdkeys, orders } from '@/db/schema'
 import { createLogger } from '@/logger'
 import { syncUsdt, USDT_CONTRACT } from '@/modules/shop/payments'
@@ -50,7 +50,7 @@ const fetcher = (async (input: string | URL | Request, init?: RequestInit) => {
   })
 }) as typeof fetch
 
-const { db, close } = createDb(':memory:')
+const { db, close } = await createDb(':memory:')
 const logger = createLogger('silent')
 const app = createApp({ config, db, logger, fetch: fetcher })
 afterAll(close)
@@ -165,12 +165,12 @@ describe('orders', () => {
   })
   it('drops the order when the gateway refuses it', async () => {
     gatewayDown = true
-    const before = db.select().from(orders).all().length
+    const before = (await db.select().from(orders).all()).length
     expect((await buy({ method: 'alipay', ...guest })).code).toBe(
       'PAYMENT_UNAVAILABLE',
     )
     gatewayDown = false
-    expect(db.select().from(orders).all()).toHaveLength(before)
+    expect(await db.select().from(orders).all()).toHaveLength(before)
   })
   it('rejects forged, foreign and underpaid callbacks', async () => {
     const { data } = await buy({ method: 'alipay', ...guest })
@@ -187,7 +187,7 @@ describe('orders', () => {
     )
     const waiting = await notify({ ...fields, trade_status: 'WAIT_BUYER_PAY' })
     expect(await waiting.text()).toBe('success')
-    expect(keysOf(data.orderNo)).toHaveLength(0)
+    expect(await keysOf(data.orderNo)).toHaveLength(0)
   })
   it('issues keys exactly once for a valid callback', async () => {
     const { data } = await buy({ method: 'alipay', quantity: 2, ...guest })
@@ -199,7 +199,7 @@ describe('orders', () => {
     const res = await notify(fields)
     expect(await res.text()).toBe('success')
     expect((await notify(fields)).status).toBe(200)
-    const keys = keysOf(data.orderNo)
+    const keys = await keysOf(data.orderNo)
     expect(keys).toHaveLength(2)
     expect(keys[0]?.balance).toBe(1)
     expect(keys[0]?.code).toMatch(/^CDK(-[0-9A-Z]{5}){4}$/)
@@ -213,6 +213,16 @@ describe('orders', () => {
     expect(session.status).toBe(200)
     const catalog = await call<ShopCatalog>('/catalog')
     expect(catalog.data.products[0]?.sold).toBe(2)
+  })
+  it('issues keys once for concurrent callbacks of one trade', async () => {
+    const { data } = await buy({ method: 'alipay', quantity: 3, ...guest })
+    const fields = {
+      out_trade_no: data.orderNo,
+      total_amount: '24.00',
+      trade_no: 'T-race',
+    }
+    await Promise.all([notify(fields), notify(fields), notify(fields)])
+    expect(await keysOf(data.orderNo)).toHaveLength(3)
   })
   it('finds guest orders by email and order password only', async () => {
     const found = await call<ShopOrder[]>('/orders/lookup', 'POST', {
@@ -229,7 +239,8 @@ describe('orders', () => {
   })
   it('shows expired orders without a payment target', async () => {
     const { data } = await buy({ method: 'alipay', ...guest })
-    db.update(orders)
+    await db
+      .update(orders)
       .set({ expiresAt: new Date(Date.now() - 1000) })
       .where(eq(orders.orderNo, data.orderNo))
       .run()
@@ -257,8 +268,31 @@ describe('usdt', () => {
     })
     expect(b.data.payAmount).toBe(1_000_100)
   })
+  it('keeps amounts distinct for simultaneous orders', async () => {
+    const placed = await Promise.all(
+      Array.from({ length: 4 }, () => buy({ method: 'usdt', ...guest })),
+    )
+    const amounts = placed.map((o) => o.data.payAmount)
+    expect(new Set(amounts).size).toBe(4)
+    const stored = await db
+      .select({ payAmount: orders.payAmount })
+      .from(orders)
+      .where(eq(orders.method, 'usdt'))
+      .all()
+    expect(new Set(stored.map((o) => o.payAmount)).size).toBe(stored.length)
+    await db
+      .update(orders)
+      .set({ expiresAt: new Date(Date.now() - 1000) })
+      .where(
+        inArray(
+          orders.orderNo,
+          placed.map((o) => o.data.orderNo),
+        ),
+      )
+      .run()
+  })
   it('settles only exact, in-window transfers to the address', async () => {
-    const pending = db
+    const pending = await db
       .select()
       .from(orders)
       .where(eq(orders.payAmount, 1_000_100))
@@ -273,17 +307,17 @@ describe('usdt', () => {
       transfer(1_000_200, 'tx-wrong-amount'),
     ]
     expect(await syncUsdt(db, config, fetcher)).toBe(0)
-    expect(keysOf(orderNo)).toHaveLength(0)
+    expect(await keysOf(orderNo)).toHaveLength(0)
     transfers = [transfer(1_000_100, 'tx-good')]
     expect(await syncUsdt(db, config, fetcher)).toBe(1)
     expect(await syncUsdt(db, config, fetcher)).toBe(0)
-    expect(keysOf(orderNo)).toHaveLength(1)
+    expect(await keysOf(orderNo)).toHaveLength(1)
   })
   it('never settles two orders with one transaction', async () => {
     const { data } = await buy({ method: 'usdt', ...guest })
     transfers = [transfer(data.payAmount, 'tx-good')]
     expect(await syncUsdt(db, config, fetcher)).toBe(0)
-    expect(keysOf(data.orderNo)).toHaveLength(0)
+    expect(await keysOf(data.orderNo)).toHaveLength(0)
   })
 })
 
@@ -339,11 +373,121 @@ describe('mock payment', () => {
     expect(paid.data.status).toBe('paid')
     expect(paid.data.keys).toHaveLength(1)
     expect((await send(dev, pay)).code).toBe('ORDER_NOT_PENDING')
-    expect(keysOf(data.orderNo)).toHaveLength(1)
+    expect(await keysOf(data.orderNo)).toHaveLength(1)
     const real = await buy({ method: 'alipay', ...guest })
     expect(
       (await send(dev, `/orders/${real.data.orderNo}/mock-pay`)).status,
     ).toBe(404)
     expect((await send(dev, '/orders/unknown/mock-pay')).status).toBe(404)
+  })
+})
+
+describe('test payment', () => {
+  const CODE = 'test-code-123'
+  const siteverify: Record<string, string>[] = []
+  let siteverifyDown = false
+  const turnstileFetch = (async (
+    input: string | URL | Request,
+    init?: RequestInit,
+  ) => {
+    if (!String(input).includes('/turnstile/v0/siteverify'))
+      return fetcher(input, init)
+    if (siteverifyDown) return new Response('down', { status: 500 })
+    const params = Object.fromEntries(new URLSearchParams(String(init?.body)))
+    siteverify.push(params)
+    return Response.json({ success: params.response === 'good-token' })
+  }) as typeof fetch
+  const prodApp = (env: Record<string, string> = {}) =>
+    createApp({
+      config: loadConfig({ NODE_ENV: 'production', ...env }),
+      db,
+      logger,
+      fetch: turnstileFetch,
+    })
+  const send = async <T>(
+    target: ReturnType<typeof prodApp>,
+    path: string,
+    body?: unknown,
+  ) => {
+    const res = await target.request(`/api/shop${path}`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'CF-Connecting-IP': '203.0.113.7',
+      },
+      ...(body ? { body: JSON.stringify(body) } : {}),
+    })
+    const json = (await res.json()) as { data: T; error?: { code: string } }
+    return { status: res.status, data: json.data, code: json.error?.code }
+  }
+  const catalogOf = async (target: ReturnType<typeof prodApp>) =>
+    (
+      (await (await target.request('/api/shop/catalog')).json()) as {
+        data: ShopCatalog
+      }
+    ).data
+  const order = { productId: 1, method: 'mock', ...guest }
+
+  it('is offered in production only with a test code', async () => {
+    expect(await catalogOf(prodApp())).toMatchObject({
+      methods: [],
+      testPayCode: false,
+      turnstileSiteKey: null,
+    })
+    expect(
+      await catalogOf(prodApp({ SHOP_TEST_PAY_CODE: CODE })),
+    ).toMatchObject({ methods: ['mock'], testPayCode: true })
+    expect(() =>
+      loadConfig({ NODE_ENV: 'production', SHOP_TEST_PAY_CODE: 'short' }),
+    ).toThrow('Invalid environment')
+  })
+
+  it('settles only with the right code', async () => {
+    const app = prodApp({ SHOP_TEST_PAY_CODE: CODE })
+    const { data } = await send<ShopOrder>(app, '/orders', order)
+    const pay = `/orders/${data.orderNo}/mock-pay`
+    expect((await send(app, pay)).code).toBe('INVALID_TEST_CODE')
+    expect((await send(app, pay, { code: 'wrong-code-1' })).status).toBe(403)
+    const paid = await send<ShopOrder>(app, pay, { code: CODE })
+    expect(paid.data.status).toBe('paid')
+    expect(paid.data.keys).toHaveLength(1)
+  })
+
+  it('requires a verified Turnstile token when configured', async () => {
+    const app = prodApp({
+      SHOP_TEST_PAY_CODE: CODE,
+      TURNSTILE_SITE_KEY: 'site-key',
+      TURNSTILE_SECRET_KEY: 'secret-key',
+    })
+    expect((await catalogOf(app)).turnstileSiteKey).toBe('site-key')
+    const { data } = await send<ShopOrder>(app, '/orders', order)
+    const pay = `/orders/${data.orderNo}/mock-pay`
+    expect((await send(app, pay, { code: CODE })).code).toBe('TURNSTILE_FAILED')
+    expect(
+      (await send(app, pay, { code: CODE, turnstileToken: 'bad-token' })).code,
+    ).toBe('TURNSTILE_FAILED')
+    siteverifyDown = true
+    expect(
+      (await send(app, pay, { code: CODE, turnstileToken: 'good-token' })).code,
+    ).toBe('TURNSTILE_FAILED')
+    siteverifyDown = false
+    expect(
+      (
+        await send(app, pay, {
+          code: 'wrong-code-1',
+          turnstileToken: 'good-token',
+        })
+      ).code,
+    ).toBe('INVALID_TEST_CODE')
+    const paid = await send<ShopOrder>(app, pay, {
+      code: CODE,
+      turnstileToken: 'good-token',
+    })
+    expect(paid.data.status).toBe('paid')
+    expect(siteverify.at(-1)).toEqual({
+      secret: 'secret-key',
+      response: 'good-token',
+      remoteip: '203.0.113.7',
+    })
   })
 })

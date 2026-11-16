@@ -43,3 +43,7 @@ Each plan is a single line linking to its detail file. All detailed information 
 - [x] [**20261111-1050-task-credential-format Require email/password/2FA for a task**](20261111-1050-task-credential-format.md) `2026-11-11`
 - [x] [**20261111-1108-admin-task-view Admin task management view**](20261111-1108-admin-task-view.md) `2026-11-11`
 - [x] [**20261111-1123-integrate-execution-worker Integrate the execution worker**](20261111-1123-integrate-execution-worker.md) `2026-11-11`
+- [x] [**20261116-0212-deploy-cloudflare-workers Deploy on Cloudflare Workers with D1/Turso**](20261116-0212-deploy-cloudflare-workers.md) `2026-11-16`
+- [x] [**20261116-0247-add-deploy-script Add a one-command build and deploy script**](20261116-0247-add-deploy-script.md) `2026-11-16`
+- [x] [**20261116-0253-split-deploy-workflow Manual deploy workflow and libSQL by default**](20261116-0253-split-deploy-workflow.md) `2026-11-16`
+- [x] [**20261116-0302-production-test-payment Test payment on deployments, guarded by a code and Turnstile**](20261116-0302-production-test-payment.md) `2026-11-16`

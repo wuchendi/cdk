@@ -12,10 +12,10 @@ export function orderStatus(order: Pick<Order, 'status' | 'expiresAt'>) {
 }
 
 /** Buyer-facing view of orders, with the keys of paid ones. */
-export function presentOrders(db: Db, rows: Order[]) {
+export async function presentOrders(db: Db, rows: Order[]) {
   const paid = rows.filter((o) => o.status === 'paid').map((o) => o.id)
   const keys = paid.length
-    ? db
+    ? await db
         .select({ orderId: cdkeys.orderId, code: cdkeys.code })
         .from(cdkeys)
         .where(inArray(cdkeys.orderId, paid))
@@ -42,17 +42,15 @@ export function presentOrders(db: Db, rows: Order[]) {
 }
 
 /** Units sold per product id, counting paid orders only. */
-export function soldByProduct(db: Db) {
-  return new Map(
-    db
-      .select({
-        productId: orders.productId,
-        sold: sql<number>`sum(${orders.quantity})`,
-      })
-      .from(orders)
-      .where(eq(orders.status, 'paid'))
-      .groupBy(orders.productId)
-      .all()
-      .map((row) => [row.productId, row.sold]),
-  )
+export async function soldByProduct(db: Db) {
+  const rows = await db
+    .select({
+      productId: orders.productId,
+      sold: sql<number>`sum(${orders.quantity})`,
+    })
+    .from(orders)
+    .where(eq(orders.status, 'paid'))
+    .groupBy(orders.productId)
+    .all()
+  return new Map(rows.map((row) => [row.productId, row.sold]))
 }

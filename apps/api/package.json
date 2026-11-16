@@ -11,21 +11,28 @@
     "start": "NODE_ENV=production bun --env-file=../../.env src/index.ts",
     "test": "bun test",
     "test:coverage": "bun test --coverage",
-    "typecheck": "tsc --noEmit -p tsconfig.json",
-    "db:generate": "drizzle-kit generate"
+    "typecheck": "tsc --noEmit -p tsconfig.json && tsc --noEmit -p tsconfig.worker.json",
+    "db:generate": "drizzle-kit generate",
+    "dev:worker": "bun scripts/d1-config.ts && wrangler dev -c wrangler.d1.jsonc",
+    "deploy": "wrangler deploy",
+    "db:migrate": "bun --env-file=../../.env src/db/migrate-cli.ts",
+    "db:migrate:d1": "bun scripts/d1-config.ts && wrangler d1 migrations apply cdk -c wrangler.d1.jsonc --remote",
+    "db:migrate:d1:local": "bun scripts/d1-config.ts && wrangler d1 migrations apply cdk -c wrangler.d1.jsonc --local"
   },
   "dependencies": {
     "@cdk/shared": "workspace:*",
+    "@libsql/client": "^0.18.0",
     "drizzle-orm": "^0.45.4",
     "hono": "^4.13.17",
     "hono-openapi": "^1.5.0",
-    "pino": "^10.4.0",
     "zod": "catalog:"
   },
   "devDependencies": {
     "@cdk/tsconfig": "workspace:*",
+    "@cloudflare/workers-types": "^5.20261116.1",
     "@types/bun": "^1.4.4",
     "drizzle-kit": "^0.31.11",
-    "typescript": "catalog:"
+    "typescript": "catalog:",
+    "wrangler": "^4.162.0"
   }
 }

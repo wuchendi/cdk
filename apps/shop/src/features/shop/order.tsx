@@ -1,5 +1,5 @@
 import type { ShopOrder } from '@cdk/shared'
-import { ApiError, Button, Notice, Panel } from '@cdk/ui'
+import { ApiError, Button, Field, Input, Notice, Panel } from '@cdk/ui'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Link } from '@tanstack/react-router'
 import { CircleCheck, Loader } from 'lucide-react'
@@ -8,6 +8,7 @@ import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { shopApi, usdt, yuan } from './api'
 import { CopyButton, StatusBadge, useErrorText } from './common'
+import { Turnstile } from './turnstile'
 
 function useCountdown(expiresAt: string) {
   const [now, setNow] = useState(() => Date.now())
@@ -24,10 +25,23 @@ function MockPayment({ order }: { order: ShopOrder }) {
   const errorText = useErrorText()
   const client = useQueryClient()
   const time = useCountdown(order.expiresAt)
+  const catalog = useQuery({ queryKey: ['catalog'], queryFn: shopApi.catalog })
+  const [code, setCode] = useState('')
+  const [token, setToken] = useState<string | null>(null)
+  const [resetKey, setResetKey] = useState(0)
+  const needsCode = catalog.data?.testPayCode ?? false
+  const siteKey = catalog.data?.turnstileSiteKey ?? null
   const pay = useMutation({
-    mutationFn: () => shopApi.mockPay(order.orderNo),
+    mutationFn: () =>
+      shopApi.mockPay(order.orderNo, {
+        ...(needsCode ? { code } : {}),
+        ...(token ? { turnstileToken: token } : {}),
+      }),
     onSuccess: (paid) => client.setQueryData(['order', order.orderNo], paid),
+    // Turnstile tokens are single-use.
+    onError: () => setResetKey((k) => k + 1),
   })
+  const ready = catalog.isSuccess && (!needsCode || code) && (!siteKey || token)
   return (
     <Panel className="space-y-4 text-sm">
       <h2 className="text-lg font-semibold">{t('order.payTitle', { time })}</h2>
@@ -35,7 +49,23 @@ function MockPayment({ order }: { order: ShopOrder }) {
         {yuan(order.payAmount)}
       </p>
       <Notice tone="warning">{t('order.mockHint')}</Notice>
-      <Button size="lg" disabled={pay.isPending} onClick={() => pay.mutate()}>
+      {needsCode && (
+        <Field label={t('order.testCode')} className="max-w-xs">
+          <Input
+            autoComplete="off"
+            value={code}
+            onChange={(e) => setCode(e.target.value)}
+          />
+        </Field>
+      )}
+      {siteKey && (
+        <Turnstile siteKey={siteKey} onToken={setToken} resetKey={resetKey} />
+      )}
+      <Button
+        size="lg"
+        disabled={!ready || pay.isPending}
+        onClick={() => pay.mutate()}
+      >
         {t(pay.isPending ? 'order.mockPaying' : 'order.mockPay')}
       </Button>
       {pay.isError && (

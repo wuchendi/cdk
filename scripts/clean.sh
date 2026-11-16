@@ -3,6 +3,7 @@
 DIRS_TO_DELETE=(
   "node_modules"
   "apps/*/node_modules"
+  "dist"
   "apps/*/dist"
   "apps/*/coverage"
   "packages/*/node_modules"

@@ -6,7 +6,8 @@ import {
   randomInt,
 } from 'node:crypto'
 import type { PayMethod } from '@cdk/shared'
-import { and, eq, gt } from 'drizzle-orm'
+import { and, eq, gt, notExists, sql } from 'drizzle-orm'
+import { alias } from 'drizzle-orm/sqlite-core'
 import type { Config } from '@/config'
 import type { Db } from '@/db'
 import { cdkeys, orders } from '@/db/schema'
@@ -19,6 +20,7 @@ const USDT_STEP = 100
 const KEY_ALPHABET = '0123456789ABCDEFGHJKMNPQRSTVWXYZ'
 
 type Order = typeof orders.$inferSelect
+const used = alias(orders, 'used')
 
 export function payMethods(config: Config): PayMethod[] {
   const methods: PayMethod[] = []
@@ -30,8 +32,11 @@ export function payMethods(config: Config): PayMethod[] {
   )
     methods.push('alipay')
   if (config.USDT_TRC20_ADDRESS && config.USDT_CNY_RATE) methods.push('usdt')
-  // Free keys: never outside development, and only when asked for.
-  if (config.SHOP_MOCK_PAY && config.NODE_ENV === 'development')
+  // Free keys: in development when asked for, elsewhere only behind a test code.
+  if (
+    config.SHOP_TEST_PAY_CODE ||
+    (config.SHOP_MOCK_PAY && config.NODE_ENV === 'development')
+  )
     methods.push('mock')
   return methods
 }
@@ -132,35 +137,42 @@ function keyCode() {
 }
 
 /** Marks a pending order paid and issues its keys; false when nothing changed. */
-export function fulfilOrder(db: Db, orderId: number, tradeNo: string) {
-  return db.transaction(
-    (tx) => {
-      const used = tx
-        .select({ id: orders.id })
-        .from(orders)
-        .where(eq(orders.tradeNo, tradeNo))
-        .get()
-      if (used) return false
-      const order = tx
-        .update(orders)
-        .set({ status: 'paid', paidAt: new Date(), tradeNo })
-        .where(and(eq(orders.id, orderId), eq(orders.status, 'pending')))
-        .returning()
-        .get()
-      if (!order) return false
-      tx.insert(cdkeys)
-        .values(
-          Array.from({ length: order.quantity }, () => ({
-            code: keyCode(),
-            balance: order.credits,
-            orderId: order.id,
-          })),
-        )
-        .run()
-      return true
-    },
-    { behavior: 'immediate' },
+export async function fulfilOrder(db: Db, orderId: number, tradeNo: string) {
+  const order = await db
+    .select({ quantity: orders.quantity })
+    .from(orders)
+    .where(eq(orders.id, orderId))
+    .get()
+  if (!order) return false
+  const codes = Array.from(
+    { length: order.quantity },
+    () => sql`(${keyCode()})`,
   )
+  const [paid] = await db.batch([
+    db
+      .update(orders)
+      .set({ status: 'paid', paidAt: new Date(), tradeNo })
+      .where(
+        and(
+          eq(orders.id, orderId),
+          eq(orders.status, 'pending'),
+          notExists(
+            db
+              .select({ id: used.id })
+              .from(used)
+              .where(eq(used.tradeNo, tradeNo)),
+          ),
+        ),
+      )
+      .returning({ id: orders.id }),
+    // Issues keys only when the update above changed this order.
+    db.insert(cdkeys).select(
+      sql`select null, k.column1, o.credits, o.id, unixepoch()
+        from (values ${sql.join(codes, sql`, `)}) as k, ${orders} as o
+        where changes() = 1 and o.id = ${orderId} and o.trade_no = ${tradeNo}`,
+    ),
+  ])
+  return paid.length > 0
 }
 
 interface Trc20Transfer {
@@ -176,7 +188,7 @@ interface Trc20Transfer {
 export async function syncUsdt(db: Db, config: Config, fetcher: typeof fetch) {
   const address = config.USDT_TRC20_ADDRESS
   if (!address) return 0
-  const open = db
+  const open = await db
     .select()
     .from(orders)
     .where(
@@ -223,7 +235,7 @@ export async function syncUsdt(db: Db, config: Config, fetcher: typeof fetch) {
         o.createdAt.getTime() <= at &&
         at <= o.expiresAt.getTime(),
     )
-    if (order && fulfilOrder(db, order.id, tx.transaction_id)) settled++
+    if (order && (await fulfilOrder(db, order.id, tx.transaction_id))) settled++
   }
   return settled
 }
